@@ -8,6 +8,12 @@ createTrace = (xValues, yValues, name) => ({
 createRandomArr = (length, max) =>
 	Array.from({ length: length }, () => Math.floor(Math.random() * max));
 
+createRandomTimeArr = (length, max) =>
+	Array.from(
+		{ length: length },
+		() => new Date(Math.floor(Math.random() * max) * 1000)
+	);
+
 function linspace(startValue, stopValue, cardinality) {
 	var arr = [];
 	var step = (stopValue - startValue) / (cardinality - 1);
@@ -23,8 +29,13 @@ function createOriginalSchedule() {
 	x = linspace(0, max, max * 10);
 	sigmoid = xValue => 1 / (1 + Math.exp((-max / 1000) * (-max / 2 + xValue)));
 
+	xDates = [...x];
+	xDates.forEach(
+		(element, index) => (xDates[index] = new Date(element * 1000))
+	);
+
 	let originalSchedule = createTrace(
-		x,
+		xDates,
 		x.map(x => budget * sigmoid(x)),
 		"Original Schedule"
 	);
@@ -34,29 +45,29 @@ function createOriginalSchedule() {
 function mainGraph(projectId) {
 	let viewOptionArr = [true, true, true, true, true, true];
 	let currentBudget = createTrace(
-		createRandomArr(10, 100),
-		createRandomArr(10, 100),
+		createRandomTimeArr(10, 10000000),
+		createRandomArr(10, 1000),
 		"Current Budget"
 	);
 	let originalSchedule = createOriginalSchedule();
 	let invoicedAmount = createTrace(
-		createRandomArr(10, 100),
-		createRandomArr(10, 100),
+		createRandomTimeArr(10, 10000000),
+		createRandomArr(10, 1000),
 		"Invoiced Amount"
 	);
 	let paidAmount = createTrace(
-		createRandomArr(10, 100),
-		createRandomArr(10, 100),
+		createRandomTimeArr(10, 10000000),
+		createRandomArr(10, 1000),
 		"Paid Amount"
 	);
 	let value = createTrace(
-		createRandomArr(10, 100),
-		createRandomArr(10, 100),
+		createRandomTimeArr(10, 10000000),
+		createRandomArr(10, 1000),
 		"Value"
 	);
 	let amountSpent = createTrace(
-		createRandomArr(10, 100),
-		createRandomArr(10, 100),
+		createRandomTimeArr(10, 10000000),
+		createRandomArr(10, 1000),
 		"Amount spent"
 	);
 
@@ -101,7 +112,8 @@ function mainGraph(projectId) {
 					size: 18
 				}
 			}
-		}
+		},
+		hovermode: "closest"
 	};
 
 	Plotly.newPlot("graph", showData, layout, { responsive: true });
