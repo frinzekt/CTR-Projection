@@ -4,57 +4,24 @@ include "./components/formGroupCheck.php";
 
 //DB CONNECTION
 include "./query/general.php";
-include "./query/fetch.php";
+
 
 $conn = getConn();
 
 //GET INITIAL VALUE OF LOADING SEQUENCE
-//$projectId = $_POST["projectID"];
+$projectId = $_REQUEST['projectId'];
+$projectName = getProjectName($projectId);
+debug_to_console($projectName);
+// DATA STRUCTURE INIT
+// $project = new viewDataSet($projectId,name)
+
+$subjobsDataSet = [];
+$subjobsTasksDataSet = [];
+
+
 
 debug_to_console("START DEBUG");
-$subjobs = json_decode(getProjectSubjobs("j2202"), true);
-echo "<pre>";
-print_r($subjobs);
-echo "</pre>";
-
-/*
-$sql = "SELECT id, firstname, lastname FROM MyGuests";
-$result = mysqli_query($conn, $sql);
-
-if (mysqli_num_rows($result) > 0) {
-    // output data of each row
-    while($row = mysqli_fetch_assoc($result)) {
-        echo "id: " . $row["id"]. " - Name: " . $row["firstname"]. " " . $row["lastname"]. "<br>";
-    }
-} else {
-    echo "0 results";
-}
-
-*/
-
-/*
-$query = "SELECT $fields FROM $table $where $sort";
-	// die($query);
-
-	$numResults;
-	if( isset($_POST['page']) && isset($_POST['perPage']) && !empty($_POST['page']) && !empty($_POST['perPage']) )
-	{
-		$result = mysqli_query( $conn, $query );
-		if( $result === false )
-			{ http_response_code(500); die( "SQL Error on line ".__line__."\n".$query."\n".mysqli_error( $conn ) ); return; }
-		// Pagination
-		$page = $_POST['page'];
-		$perPage = $_POST['perPage'];
-		$numResults = mysqli_num_rows($result);
-
-		if( $numResults == 0 )
-			{ http_response_code(200); die( json_encode([]) ); return; }
-		$numPages = ceil( $numResults / $perPage );
-		$page = min( $numPages, $page ) - 1;
-		$offset = $page * $perPage;
-		$query = $query." LIMIT $perPage OFFSET $offset";
-	}
-	*/
+$subjobs = json_decode(getProjectSubjobs($projectId), true);
 ?>
 
 <!DOCTYPE html>
@@ -67,8 +34,10 @@ $query = "SELECT $fields FROM $table $where $sort";
 	<!-- Latest compiled and minified CSS -->
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
 
+
+
 	<!-- Latest compiled JavaScript -->
-	<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous">
+	<script src="https://code.jquery.com/jquery-3.1.1.min.js">
 	</script>
 	<!-- NOTE COMMENT THIS ON DEPLOYMENT TO WP -->
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous">
@@ -89,34 +58,43 @@ $query = "SELECT $fields FROM $table $where $sort";
 	<title>Project Name: -----</title>
 </head>
 
-<body onload="main()">
+<body>
 	<div style="width:100%;position: fixed;top: 2rem;z-index: 14; height: calc( 100vh - 2rem ); overflow: auto;background:grey">
 		<div class="container-fluid" style="width:80%">
 			<div class="title container">
-				<h1 class="text-center">Project Name</h1>
+				<h1 class="text-center"><?php print($projectName); ?></h1>
 			</div>
 			<div class="row my-5">
 				<div class="col-md-3  ">
 					<div class="view-options form-group card card-body">
 						<!-- FORM GROUP CHECKS -->
 						<?php
+
+						// SETTING DYNAMIC FOR GROUP AND DATA STRUCTURE IDENTIFIERS
 						$View = ["Current Budget", "Original Schedule", "Invoiced Amount (Invoice Out)", "Paid amount", "Value", "Amount Spent"];
 						$subjobsNames = [];
 						$taskNamesWithSubjob = [];
 						foreach ($subjobs as $subjob) {
 							$subjobsNames[] = $subjob["Name"];
+							$subjobsDataSet[] = new ViewDataSet($subjob["Number"], $subjob["Name"]);
+							$tasksDataSet = [];
 							foreach ($subjob["Tasks"] as $task) {
 								$taskNamesWithSubjob[] = $task["Name"] . " (" . $subjob["Name"] . ") ";
+
+								//CREATING AN ARRAY OF TASKS
+								$tasksDataSet[] = new ViewDataSet($task["Number"], $task["Name"]);
 							}
+							$subjobsTasksDataSet[] = $tasksDataSet; //ADDING THE CREATED ARRAY TO ANOTHER ARRAY
 						}
+
 						?>
 						<?php FormGroupCheck("Subjobs", $subjobsNames) ?>
 						<?php FormGroupCheck("Tasks", $taskNamesWithSubjob) ?>
-						<?php FormGroupCheck("View", $View) ?>
+						<!-- <?php FormGroupCheck("View", $View) ?> -->
 
 						<!-- CONTINUE FORMS -->
 
-						<div class="form-group">
+						<!-- <div class="form-group">
 							<h5 for="date-group">Date Range</h5>
 							<div class="date-group form-inline">
 								<input type="date" class="form-control-sm" name="date-start">
@@ -124,7 +102,7 @@ $query = "SELECT $fields FROM $table $where $sort";
 								<input type="date" class="form-control-sm" name="date-end">
 							</div>
 
-						</div>
+						</div> -->
 
 						<div class="form-group">
 							<h5 for="number-mode"> Number Mode </h5>
@@ -165,14 +143,22 @@ $query = "SELECT $fields FROM $table $where $sort";
 <script src="./CTRgraphing.js"></script>
 <script src="./CTRspreadsheet.js"></script>
 <script src="./CTRload.js"></script>
-
-
 <script>
-	function main() {
-		pageload("j2202");
-		mainSpread("j2202");
-		mainGraph("j2202");
+	async function main() {
+		let data = await pageload();
+		await (() => {
+			console.log("FETCHING DATA COMPLETE")
+			mainSpread(data);
+			mainGraph(data);
+		})()
+
 	}
+	$(document).ready(() => {
+		console.log("DOCUMENT LOADED")
+		main();
+	})
 </script>
+
+
 
 </html>
