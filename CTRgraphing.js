@@ -42,57 +42,80 @@ function createOriginalSchedule() {
 
 	return originalSchedule;
 }
-function mainGraph(projectId) {
+function mainGraph(data) {
+	let { currentBudgetJob, dateInterval, originalSchedule } = data;
+
+	//INVOICES UNPACKING
+	let { invoicedAmountGroupByJob, reconciledAmountGroupByJob } = data;
+	invoicedAmount = unpackInvoicedAmount(data);
+	reconciledAmount = unpackReconciledAmount(data);
+
+	//EXPENSES UNPACKING
+	let { payrollGroupByJob, invoicedInGroupByJob, expensesGroupByJob } = data;
+	[id, ...payroll] = payrollGroupByJob;
+	[id, ...invoicedIn] = invoicedInGroupByJob;
+	[id, ...expenses] = expensesGroupByJob;
+
+	amountSpent = payroll;
+	if (!(!Array.isArray(invoicedIn) || !invoicedIn.length)) {
+		amountSpent = list(nj.array(amountSpent).add(nj.array(invoicedIn)));
+	}
+	if (!(!Array.isArray(expenses) || !expenses.length)) {
+		amountSpent = list(nj.array(amountSpent).add(nj.array(expenses)));
+	}
+
 	let viewOptionArr = [true, true, true, true, true, true];
-	let currentBudget = createTrace(
-		createRandomTimeArr(10, 10000000),
-		createRandomArr(10, 1000),
+	let currentBudgetTrace = createTrace(
+		dateInterval,
+		currentBudgetJob,
 		"Current Budget"
 	);
-	let originalSchedule = createOriginalSchedule();
-	let invoicedAmount = createTrace(
-		createRandomTimeArr(10, 10000000),
-		createRandomArr(10, 1000),
+	//let originalSchedule = createOriginalSchedule();
+	let originalScheduleTrace = createTrace(
+		dateInterval,
+		originalSchedule,
+		"Original Schedule"
+	);
+
+	let invoicedAmountTrace = createTrace(
+		dateInterval,
+		invoicedAmount,
 		"Invoiced Amount"
 	);
-	let paidAmount = createTrace(
-		createRandomTimeArr(10, 10000000),
-		createRandomArr(10, 1000),
+	let paidAmountTrace = createTrace(
+		dateInterval,
+		reconciledAmount,
 		"Paid Amount"
 	);
-	let value = createTrace(
-		createRandomTimeArr(10, 10000000),
-		createRandomArr(10, 1000),
+	let valueTrace = createTrace(
+		dateInterval,
+		createRandomArr(54, 10000),
 		"Value"
 	);
-	let amountSpent = createTrace(
-		createRandomTimeArr(10, 10000000),
-		createRandomArr(10, 1000),
-		"Amount spent"
-	);
+	let amountSpentTrace = createTrace(dateInterval, amountSpent, "Amount spent");
 
 	//SHOWING GRAPH
 
-	var data = [
-		currentBudget,
-		originalSchedule,
-		invoicedAmount,
-		paidAmount,
-		value,
-		amountSpent
+	var graphData = [
+		currentBudgetTrace,
+		originalScheduleTrace,
+		invoicedAmountTrace,
+		paidAmountTrace,
+		valueTrace,
+		amountSpentTrace
 	];
 	let showData = [];
-	console.log(data);
+	console.log(graphData);
 	console.log(createRandomArr(10, 100));
 	viewOptionArr.forEach((isShown, index) => {
 		if (isShown) {
-			showData.push(data[index]);
+			showData.push(graphData[index]);
 		}
 	});
 
 	var layout = {
 		title: {
-			text: "Cost Resource Over Time",
+			text: "Cost, Time Resource",
 			font: {
 				size: 24
 			}
@@ -112,8 +135,8 @@ function mainGraph(projectId) {
 					size: 18
 				}
 			}
-		},
-		hovermode: "closest"
+		}
+		//hovermode: "closest"
 	};
 
 	Plotly.newPlot("graph", showData, layout, { responsive: true });

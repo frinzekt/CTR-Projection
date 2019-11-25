@@ -1,5 +1,10 @@
 <?php
 
+if (is_admin()) {
+    /* Graph magic ctr functiosnt */
+    add_action('wp_ajax_ajax_CTRload', 'ajax_CTRload');
+    add_action('wp_ajax_nopriv_ajax_CTRload', 'ajax_CTRload');
+}
 
 
 include "./general.php";
