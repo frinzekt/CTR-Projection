@@ -843,26 +843,26 @@ function extractJobRow($job)
         - $projectId (from POST OR GET REQUEST)
     Action: Packages an API from all the aggregated data from fetch.php
     Dependencies:
-        - getProjectDate()
-        - getDateInterval()
-        - extractJobRow()
-        - getCurrentBudgetJob()
-        - generateOriginalSchedule()
-        - getPODetails()
-        - getInvoicedAmount()
-        - getInvoicedAmountGroupByJob()
-        - getReconciledAmountGroupById()
-        - getReconciledAmountGroupByJob()
-        - getPayrollGroupByEId()
-        - getPayrollGroupByJob()
-        - getPayrollGroupBySubjob()
-        - getPayrollGroupByTask()
-        - getInvoicedInGroupById()
-        - getInvoicedInGroupByJob()
-        - getExpensesGroupById()
-        - getExpensesGroupByJob()
-        - getExpensesGroupBySubjob()
-        - getExpensesGroupByTask()
+        - getProjectDate() <- fetch.php
+        - getDateInterval() <- fetch.php
+        - extractJobRow() <- fetch.php
+        - getCurrentBudgetJob() <- fetch.php
+        - generateOriginalSchedule() <- fetch.php
+        - getPODetails() <- fetch.php
+        - getInvoicedAmount() <- fetch.php
+        - getInvoicedAmountGroupByJob() <- fetch.php
+        - getReconciledAmountGroupById() <- fetch.php
+        - getReconciledAmountGroupByJob() <- fetch.php
+        - getPayrollGroupByEId() <- fetch.php
+        - getPayrollGroupByJob() <- fetch.php
+        - getPayrollGroupBySubjob() <- fetch.php
+        - getPayrollGroupByTask() <- fetch.php
+        - getInvoicedInGroupById() <- fetch.php
+        - getInvoicedInGroupByJob() <- fetch.php
+        - getExpensesGroupById() <- fetch.php
+        - getExpensesGroupByJob() <- fetch.php
+        - getExpensesGroupBySubjob() <- fetch.php
+        - getExpensesGroupByTask() <- fetch.php
     Output:
         - API package with structure: (seen below before JSON ENCODE)
     array(
