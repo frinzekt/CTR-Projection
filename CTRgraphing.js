@@ -8,40 +8,6 @@ createTrace = (xValues, yValues, name) => ({
 createRandomArr = (length, max) =>
 	Array.from({ length: length }, () => Math.floor(Math.random() * max));
 
-createRandomTimeArr = (length, max) =>
-	Array.from(
-		{ length: length },
-		() => new Date(Math.floor(Math.random() * max) * 1000)
-	);
-
-function linspace(startValue, stopValue, cardinality) {
-	var arr = [];
-	var step = (stopValue - startValue) / (cardinality - 1);
-	for (var i = 0; i < cardinality; i++) {
-		arr.push(startValue + step * i);
-	}
-	return arr;
-}
-
-function createOriginalSchedule() {
-	budget = 1000;
-	max = 100;
-	x = linspace(0, max, max * 10);
-	sigmoid = xValue => 1 / (1 + Math.exp((-max / 1000) * (-max / 2 + xValue)));
-
-	xDates = [...x];
-	xDates.forEach(
-		(element, index) => (xDates[index] = new Date(element * 1000))
-	);
-
-	let originalSchedule = createTrace(
-		xDates,
-		x.map(x => budget * sigmoid(x)),
-		"Original Schedule"
-	);
-
-	return originalSchedule;
-}
 function mainGraph(data) {
 	let { currentBudgetJob, dateInterval, originalSchedule } = data;
 
