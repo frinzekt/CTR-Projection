@@ -99,6 +99,7 @@ function mainSpread(data) {
 	addBlankRow();
 
 	invoicedAmount = unpackInvoicedAmount(data);
+	[id, ...invoicedAmount] = data.invoicedAmountGroupByJob;
 	addJobRow("Invoiced Amount", invoicedAmount);
 
 	//Invoice Details
@@ -121,37 +122,54 @@ function mainSpread(data) {
 	addJobRow("Amount Spent", []);
 
 	//Employee Payroll
-	addSecondLevelRow("Employee", []);
-	payrollGroupByEId.forEach(employee => {
-		addSecondLevelRow(employee[0], employee.slice(1, rowLength + 1));
-	});
-	addBlankRow();
+	if (payrollGroupByEId && payrollGroupByEId.length) {
+		// not empty
+		addSecondLevelRow("Employee", []);
+		payrollGroupByEId.forEach(employee => {
+			addSecondLevelRow(employee[0], employee.slice(1, rowLength + 1));
+		});
+		addBlankRow();
+	}
 
 	//InvoiceIn / Contractors
-	addSecondLevelRow("Invoice In", []);
-	invoicedInGroupById.forEach(invoice => {
-		addSecondLevelRow(invoice[0], invoice.slice(1, rowLength + 1));
-	});
-	addBlankRow();
+	if (invoicedInGroupById && invoicedInGroupById.length) {
+		// not empty
+		addSecondLevelRow("Invoice In", []);
+		invoicedInGroupById.forEach(invoice => {
+			addSecondLevelRow(invoice[0], invoice.slice(1, rowLength + 1));
+		});
+		addBlankRow();
+	}
 
 	//Expenses
-	addSecondLevelRow("Expenses", []);
-	expensesGroupById.forEach(expense => {
-		addSecondLevelRow(expense[0], expense.slice(1, rowLength + 1));
-	});
-	addBlankRow();
+	if (expensesGroupById && expensesGroupById.length) {
+		// not empty
+		addSecondLevelRow("Expenses", []);
+		expensesGroupById.forEach(expense => {
+			addSecondLevelRow(expense[0], expense.slice(1, rowLength + 1));
+		});
+		addBlankRow();
+	}
 
 	var container = document.getElementById("spreadsheet");
 	console.log(spreadsheetData);
 	var hot = new Handsontable(container, {
 		data: spreadsheetData,
+		width: "100%",
+		rowHeights: 23,
+
 		rowHeaders: true,
 		colHeaders: true,
-		filters: true,
+		//filters: true,
 		readOnly: true, // make table cells read-only
-
-		dropdownMenu: true,
+		stretchH: "all",
+		//dropdownMenu: true,
 		licenseKey: "non-commercial-and-evaluation",
+
+		fixedColumnsLeft: 2,
+		fixedRowsTop: 1,
+		viewportColumnRenderingOffset: 20,
+		viewportRowRenderingOffset: 20,
 
 		cells: function(row, col) {
 			var cellProperties = {};
@@ -161,5 +179,22 @@ function mainSpread(data) {
 			}
 			return cellProperties;
 		}
+	});
+	var downloadBTN = document.getElementById("export-file");
+	var exportPlugin = hot.getPlugin("exportFile");
+	var filename = "CTR-".concat(id, " [YYYY]-[MM]-[DD]");
+	downloadBTN.addEventListener("click", function() {
+		exportPlugin.downloadFile("csv", {
+			bom: false,
+			columnDelimiter: ",",
+			columnHeaders: false,
+			rowHeaders: false,
+			exportHiddenColumns: false,
+			exportHiddenRows: false,
+			fileExtension: "csv",
+			filename: filename,
+			mimeType: "text/csv",
+			rowDelimiter: "\r\n"
+		});
 	});
 }
