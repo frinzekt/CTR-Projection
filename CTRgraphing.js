@@ -1,3 +1,15 @@
+/*
+	Inputs:
+		- xValues
+		- yValues
+		- Name of Trace
+	Action: Creates a Scatter trace for Plotly depending on the above inputs
+	Dependencies:
+		- 
+	Output:
+		- 
+	Return: Plotly Scatter Trace
+*/
 createTrace = (xValues, yValues, name) => ({
 	x: xValues,
 	y: yValues,
@@ -5,8 +17,24 @@ createTrace = (xValues, yValues, name) => ({
 	name: name
 });
 
+//Prefills data for unoccupied piece in the graph (placeholder)
 createRandomArr = (length, max) =>
 	Array.from({ length: length }, () => Math.floor(Math.random() * max));
+
+/*
+    Inputs:
+        - API CTR Data
+	Action:
+		- Creates traces for all the API Data
+		- Layouting of the Traces
+		- display trace to the selector
+    Dependencies:
+		- createTrace()
+		- Plotly CDN attached
+    Output:
+        - Produces a graph that is directed selector #graph
+    Return: None
+*/
 
 function mainGraph(data) {
 	let { currentBudgetJob, dateInterval, originalSchedule } = data;

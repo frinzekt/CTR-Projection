@@ -1,23 +1,95 @@
+//Initializes Global ( the whole file) Variable Spreadsheet
 let spreadsheetData = [];
 
+/*
+	Inputs:
+		- spreadsheetData (array - global var)
+		- row (array to be added in spreadsheet)
+	Action: Adds to row the the spreadsheet Data
+	Dependencies:
+		- 
+	Output:
+		- spreadsheetData
+	Return: None
+*/
 function addSpreadSheetRow(row) {
 	spreadsheetData.push(row);
 }
+
+/*
+	Inputs:
+		- spreadsheetData (array - global var)
+	Action: Adds a blank row to the spreadsheet data, useful for spacing
+	Dependencies:
+		- 
+	Output:
+		- spreadsheetData
+	Return: None
+*/
 function addBlankRow() {
 	row = [];
 	spreadsheetData.push(row);
 }
+
+/*
+	Inputs:
+		- spreadsheetData (array - global var)
+		- title (string)
+		- data (array)
+	Action: Adds a first level row starting from the most left side and adds data
+	Dependencies:
+		- addSpreadSheetRow()
+	Output:
+		- spreadsheetData
+	Return: None
+*/
 function addJobRow(title, data) {
 	addSpreadSheetRow([title, "", "", ...data]);
 }
+
+/*
+	Inputs:
+		- spreadsheetData (array - global var)
+		- title (string)
+		- data (array)
+	Action: Adds a second level row starting from the 2nd most left side
+	Dependencies:
+		- addSpreadSheetRow()
+	Output:
+		- spreadsheetData
+	Return: None
+*/
 function addSecondLevelRow(name, data) {
 	addSpreadSheetRow(["", name, "", ...data]);
 }
 
-function getDays(date) {
-	return Math.floor(date / (1000 * 60 * 60 * 24));
+/*
+	Inputs:
+		- spreadsheetData (array - global var)
+		- subjobName
+		- taskName
+	Action: Adds a second level and third level row starting from the 2nd most left side
+	Dependencies:
+		- addSpreadSheetRow()
+	Output:
+		- spreadsheetData
+	Return: None
+*/
+
+function addSubjobTaskRow(subjob, task, data) {
+	addSpreadSheetRow(["", subjob, task, ...data]);
 }
 
+/*
+	Inputs:
+		- From HOT Renderer
+	Action: A callback function that is passed to another function (HandsonTable Renderer) for custom css renderer
+	Dependencies:
+		- 
+	Output:
+		- To HOT Renderer
+	Return: 
+*/
 function titleColRenderer(instance, td, row, col, prop, value, cellProperties) {
 	Handsontable.renderers.TextRenderer.apply(this, arguments);
 	td.style.fontWeight = "bold";
@@ -25,54 +97,20 @@ function titleColRenderer(instance, td, row, col, prop, value, cellProperties) {
 	//td.style.background = "#CEC";
 }
 
-function negativeValueRenderer(
-	instance,
-	td,
-	row,
-	col,
-	prop,
-	value,
-	cellProperties
-) {
-	Handsontable.renderers.TextRenderer.apply(this, arguments);
-
-	// if row contains negative number
-	if (parseInt(value, 10) < 0) {
-		// add class "negative"
-		td.className = "make-me-red";
-	}
-
-	if (!value || value === "") {
-		td.style.background = "#EEE";
-	} else {
-		if (value === "Nissan") {
-			td.style.fontStyle = "italic";
-		}
-		td.style.background = "";
-	}
-}
-// Initialize Title Layout
 /*
-value = "2019-11-07";
-endvalue = "2019-11-20";
-startDate = new Date(value + "T00:00");
-endDate = new Date(endvalue + "T00:00");
-
-noLoops = Math.ceil(getDays(endDate - startDate) / 7); // PER WEEK
-dates = [startDate];
-dateFormatted = [startDate.toLocaleDateString("en-AU")];
-
-console.log(dates);
-for (let i = 1; i < noLoops + 1; i++) {
-	dates[i] = new Date(startDate);
-	dates[i].setDate(dates[i].getDate() + 7 * i);
-	dateFormatted[i] = dates[i].toLocaleDateString("en-AU");
-}
-console.log("after");
-console.log(dates);
-
-addSpreadSheetRow(["", "", "", ...dateFormatted]);*/
-
+	Inputs:
+		- API Data
+	Action: Display the Spreadsheet form of API Datato the selector #spreadsheet with download button on #export-file
+	Dependencies:
+		- addSpreadSheetRow()
+		- addJobRow
+		- addSecondLevelRow
+		- addBlankRow
+		- HandonTable CDN attached
+	Output:
+		- selector #spreadsheet
+	Return: 
+*/
 function mainSpread(data) {
 	let {
 		currentBudgetJob,
@@ -107,8 +145,9 @@ function mainSpread(data) {
 	invoicedAmountGroupById.forEach(invoiceOrder => {
 		addSecondLevelRow(invoiceOrder[0], invoiceOrder.slice(1, rowLength + 1));
 	});
-
 	addBlankRow();
+
+	//Reconciled Amount
 	reconciledAmount = unpackReconciledAmount(data);
 	addJobRow("Reconciled Amount", reconciledAmount);
 
@@ -151,6 +190,7 @@ function mainSpread(data) {
 		addBlankRow();
 	}
 
+	//Displays Spreadsheet
 	var container = document.getElementById("spreadsheet");
 	console.log(spreadsheetData);
 	var hot = new Handsontable(container, {
@@ -180,6 +220,8 @@ function mainSpread(data) {
 			return cellProperties;
 		}
 	});
+
+	// Displays the Download Button
 	var downloadBTN = document.getElementById("export-file");
 	var exportPlugin = hot.getPlugin("exportFile");
 	var filename = "CTR-".concat(id, " [YYYY]-[MM]-[DD]");
