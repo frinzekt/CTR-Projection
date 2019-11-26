@@ -154,6 +154,20 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 <script src="./CTRspreadsheet.js"></script>
 <script src="./CTRload.js"></script>
 <script>
+	/*
+		Inputs:
+			- API DATA in CTRgraphload()
+		Action: 
+			- Calls CTRgraphload() to fetch API DATA (ASYNCHRONOUSLY)
+			- Passes the API Data to the spreadsheet and graphing portion
+		Dependencies:
+			- mainSpread() <- CTRspreadsheet.js
+			- mainGraph() <- CTRgraphing.js
+			- CTRgraphload() <- CTRload.js
+		Output:
+			- 
+		Return: 
+	*/
 	async function main() {
 		let data = await CTRgraphload();
 		await (() => {
@@ -163,6 +177,7 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 		})()
 
 	}
+	//Ensures codes are only run when everything is loaded
 	$(document).ready(() => {
 		console.log("DOCUMENT LOADED")
 		main();

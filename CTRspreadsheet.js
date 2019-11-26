@@ -112,6 +112,7 @@ function titleColRenderer(instance, td, row, col, prop, value, cellProperties) {
 	Return: 
 */
 function mainSpread(data) {
+	//JS ES6 Destructuring
 	let {
 		currentBudgetJob,
 		dateInterval,
