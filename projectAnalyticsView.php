@@ -74,22 +74,29 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 						$View = ["Current Budget", "Original Schedule", "Invoiced Amount (Invoice Out)", "Paid amount", "Value", "Amount Spent"];
 						$subjobsNames = [];
 						$taskNamesWithSubjob = [];
+
+						$subjobsNumbers = [];
+						$taskNumbersWithSubjob = [];
+
 						foreach ($subjobs as $subjob) {
 							$subjobsNames[] = $subjob["Name"];
-							$subjobsDataSet[] = new ViewDataSet($subjob["Number"], $subjob["Name"]);
-							$tasksDataSet = [];
+							$subjobsNumbers[] = $subjob["Number"];
+
+							// $subjobsDataSet[] = new ViewDataSet($subjob["Number"], $subjob["Name"]);
+							// $tasksDataSet = [];
 							foreach ($subjob["Tasks"] as $task) {
 								$taskNamesWithSubjob[] = $task["Name"] . " (" . $subjob["Name"] . ") ";
+								$taskNumbersWithSubjob[] = "{$subjob["Number"]},{$task["Number"]}";
 
 								//CREATING AN ARRAY OF TASKS
-								$tasksDataSet[] = new ViewDataSet($task["Number"], $task["Name"]);
+								// $tasksDataSet[] = new ViewDataSet($task["Number"], $task["Name"]);
 							}
-							$subjobsTasksDataSet[] = $tasksDataSet; //ADDING THE CREATED ARRAY TO ANOTHER ARRAY
+							// $subjobsTasksDataSet[] = $tasksDataSet; //ADDING THE CREATED ARRAY TO ANOTHER ARRAY
 						}
 
-						?>
-						<?php FormGroupCheck("Subjobs", $subjobsNames) ?>
-						<?php FormGroupCheck("Tasks", $taskNamesWithSubjob) ?>
+
+						FormGroupCheck("Subjobs", $subjobsNames, $subjobsNumbers);
+						FormGroupCheck("Tasks", $taskNamesWithSubjob, $taskNumbersWithSubjob); ?>
 						<!-- <?php FormGroupCheck("View", $View) ?> -->
 
 						<!-- CONTINUE FORMS -->
@@ -116,6 +123,9 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 							<button class="btn btn-primary" onclick="">
 								Apply changes
 							</button>
+							<button id="export-file" class="intext-btn btn btn-primary ">
+								Download CSV
+							</button>
 						</div>
 					</div>
 
@@ -131,7 +141,7 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 				</div>
 			</div>
 			<div class="row container-fluid spreadsheet-container card card-body" style="">
-				<div class="" id="spreadsheet">
+				<div class="" id="spreadsheet" style="">
 				</div>
 				<p></p>
 			</div>
@@ -139,13 +149,13 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 	</div>
 </body>
 <!-- NOTE COMMENT THIS ON DEPLOYMENT TO WP -->
-<link rel="stylesheet" href="./projectAnalytics.css" />
+<link rel=" stylesheet" href="./projectAnalytics.css" />
 <script src="./CTRgraphing.js"></script>
 <script src="./CTRspreadsheet.js"></script>
 <script src="./CTRload.js"></script>
 <script>
 	async function main() {
-		let data = await pageload();
+		let data = await CTRgraphload();
 		await (() => {
 			console.log("FETCHING DATA COMPLETE")
 			mainSpread(data);
