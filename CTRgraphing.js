@@ -17,54 +17,24 @@ createTrace = (xValues, yValues, name) => ({
 	name: name
 });
 
-//Prefills data for unoccupied piece in the graph (placeholder)
-createRandomArr = (length, max) =>
-	Array.from({ length: length }, () => Math.floor(Math.random() * max));
+// const calculateDisplay() => {
 
-/*
-    Inputs:
-        - API CTR Data
-	Action:
-		- Creates traces for all the API Data
-		- Layouting of the Traces
-		- display trace to the selector
-    Dependencies:
-		- createTrace()
-		- Plotly CDN attached
-    Output:
-        - Produces a graph that is directed selector #graph
-    Return: None
-*/
+// }
 
-function mainGraph(data) {
-	let { currentBudgetJob, dateInterval, originalSchedule } = data;
-
-	//INVOICES UNPACKING
-	let { invoicedAmountGroupByJob, reconciledAmountGroupByJob } = data;
-	invoicedAmount = unpackInvoicedAmount(data);
-	reconciledAmount = unpackReconciledAmount(data);
-
-	//EXPENSES UNPACKING
-	let { payrollGroupByJob, invoicedInGroupByJob, expensesGroupByJob } = data;
-	[id, ...payroll] = payrollGroupByJob;
-	[id, ...invoicedIn] = invoicedInGroupByJob;
-	[id, ...expenses] = expensesGroupByJob;
-
-	amountSpent = payroll;
-	if (!(!Array.isArray(invoicedIn) || !invoicedIn.length)) {
-		amountSpent = list(nj.array(amountSpent).add(nj.array(invoicedIn)));
-	}
-	if (!(!Array.isArray(expenses) || !expenses.length)) {
-		amountSpent = list(nj.array(amountSpent).add(nj.array(expenses)));
-	}
-
-	let viewOptionArr = [true, true, true, true, true, true];
+const createCTRTraces = (
+	dateInterval,
+	currentBudget,
+	originalSchedule,
+	invoicedAmount,
+	reconciledAmount,
+	value,
+	amountSpent
+) => {
 	let currentBudgetTrace = createTrace(
 		dateInterval,
-		currentBudgetJob,
+		currentBudget,
 		"Current Budget"
 	);
-	//let originalSchedule = createOriginalSchedule();
 	let originalScheduleTrace = createTrace(
 		dateInterval,
 		originalSchedule,
@@ -81,16 +51,10 @@ function mainGraph(data) {
 		reconciledAmount,
 		"Paid Amount"
 	);
-	let valueTrace = createTrace(
-		dateInterval,
-		createRandomArr(54, 10000),
-		"Value"
-	);
+	let valueTrace = createTrace(dateInterval, value, "Value");
 	let amountSpentTrace = createTrace(dateInterval, amountSpent, "Amount spent");
 
-	//SHOWING GRAPH
-
-	var graphData = [
+	let graphData = [
 		currentBudgetTrace,
 		originalScheduleTrace,
 		invoicedAmountTrace,
@@ -98,16 +62,13 @@ function mainGraph(data) {
 		valueTrace,
 		amountSpentTrace
 	];
-	let showData = [];
-	console.log(graphData);
-	console.log(createRandomArr(10, 100));
-	viewOptionArr.forEach((isShown, index) => {
-		if (isShown) {
-			showData.push(graphData[index]);
-		}
-	});
 
-	var layout = {
+	return graphData;
+};
+const createCTRLayout = (initWidth, initHeight) => {
+	let layout = {
+		width: initWidth,
+		height: initHeight,
 		title: {
 			text: "Cost, Time Resource",
 			font: {
@@ -132,6 +93,74 @@ function mainGraph(data) {
 		}
 		//hovermode: "closest"
 	};
+	return layout;
+};
+/*
+    Inputs:
+        - API CTR Data
+	Action:
+		- Creates traces for all the API Data
+		- Layouting of the Traces
+		- display trace to the selector
+    Dependencies:
+		- createTrace()
+		- Plotly CDN attached
+    Output:
+        - Produces a graph that is directed selector #graph
+    Return: None
+*/
+const reDrawGraph = (
+	dateInterval,
+	currentBudget,
+	originalSchedule,
+	invoicedAmount,
+	reconciledAmount,
+	value,
+	amountSpent
+) => {
+	graphData = createCTRTraces(
+		dateInterval,
+		currentBudget,
+		originalSchedule,
+		invoicedAmount,
+		reconciledAmount,
+		value,
+		amountSpent
+	);
+	let target = document.querySelector("#graph");
+	let layout = createCTRLayout(target.clientWidth, target.clientHeight);
+	return Plotly.newPlot(target, graphData, layout, { responsive: true });
+};
+function mainGraph(data) {
+	let { currentBudgetJob, dateInterval, originalSchedule } = data;
 
-	Plotly.newPlot("graph", showData, layout, { responsive: true });
+	//GROUP BY JOB DATA UNPACKING
+	invoicedAmount = unpackInvoicedAmount(data);
+	reconciledAmount = unpackReconciledAmount(data);
+	payroll = unpackPayroll(data);
+	invoicedIn = unpackInvoicedIn(data);
+	expenses = unpackExpenses(data);
+	value = unpackValue(data);
+
+	let amountSpent = calculateAmountSpent(
+		payroll,
+		invoicedIn,
+		expenses,
+		dateInterval.length
+	);
+
+	//SHOWING GRAPH - global variable to be picked up by event handlers
+	graphData = createCTRTraces(
+		dateInterval,
+		currentBudgetJob,
+		originalSchedule,
+		invoicedAmount,
+		reconciledAmount,
+		value,
+		amountSpent
+	);
+	let target = document.querySelector("#graph");
+	let layout = createCTRLayout(target.clientWidth, target.clientHeight);
+
+	return Plotly.plot(target, graphData, layout, { responsive: true });
 }
