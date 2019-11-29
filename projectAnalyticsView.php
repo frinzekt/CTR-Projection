@@ -22,6 +22,7 @@ $subjobsTasksDataSet = [];
 
 debug_to_console("START DEBUG");
 $subjobs = json_decode(getProjectSubjobs($projectId), true);
+
 ?>
 
 <!DOCTYPE html>
@@ -59,7 +60,11 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 </head>
 
 <body>
-	<div style="width:100%;position: fixed;top: 2rem;z-index: 14; height: calc( 100vh - 2rem ); overflow: auto;background:grey">
+	<div class="container-fluid center-block" id="loader-parent">
+		<div class="">Loading</div>
+		<div class="loader "></div>
+	</div>
+	<div style="width:100%;position: fixed;top: 2rem;z-index: 14; height: calc( 100vh - 2rem ); overflow: auto;background:grey" id="CTR-content">
 		<div class="container-fluid" style="width:80%">
 			<div class="title container">
 				<h1 class="text-center"><?php print($projectName); ?></h1>
@@ -133,7 +138,7 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 				<div class="col-md-9 ">
 					<div class="row ">
 						<div class="container-fluid chart-container card card-body">
-							<div class="graph-container" id="graph">
+							<div class="graph-container container-fluid" id="graph">
 							</div>
 						</div>
 					</div>
@@ -168,18 +173,37 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 			- 
 		Return: 
 	*/
+	const hideContent = () => {
+		//Opacity is used for manipulating visibility as to allow rendering in the background
+		let loading = true;
+		$('#loader-parent').css('opacity', '1');
+		$('#CTR-content').css('opacity', '0');
+	}
+	const showContent = () => {
+		let loading = false;
+		$('#loader-parent').css('opacity', '0');
+		$('#CTR-content').css('opacity', '1');
+	}
 	async function main() {
+		hideContent();
 		let data = await CTRgraphload();
-		await (() => {
+
+		//Creates a promise that says "rendering will eventually finish"
+		let promise = new Promise((resolve, reject) => {
 			console.log("FETCHING DATA COMPLETE")
-			mainSpread(data);
-			mainGraph(data);
-		})()
+			mainGraph(data)
+			resolve(mainSpread(data));
+		})
+
+		//Calls the promise and awaits for the result
+		let result = await promise;
+
+		//When rendering is finished on the promise, show content
+		showContent();
 
 	}
 	//Ensures codes are only run when everything is loaded
 	$(document).ready(() => {
-		console.log("DOCUMENT LOADED")
 		main();
 	})
 </script>
