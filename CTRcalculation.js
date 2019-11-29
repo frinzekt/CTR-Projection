@@ -61,23 +61,26 @@ const subjobTaskSubtraction = (
 
 	//SUBTRACT ONLY IF THE ID BELONGS TO THE SET(subjobId) TO SUBTRACT
 	//EXCEPT 1: if taskId = other ... where subjobId does not matter
-	//EXCEPT 2: if subjobId=other ... should not do subtraction as it will be subtracted twice
-    // Update: Deselecting other subjob does not subtract other tasks
-    groupByTaskValue.forEach(([subjobId, taskId, ...values]) => {
-		let combinedKey = subjobId + "," + taskId;
+	groupByTaskValue.forEach(([subjobId, taskId, ...values]) => {
 		if (["other", "null", ""].includes(subjobId.toLowerCase())) {
 			subjobId = "-1";
 		}
 		if (["other", "null", ""].includes(taskId.toLowerCase())) {
 			taskId = "-1";
 		}
+		let combinedKey = subjobId + "," + taskId;
 
-		if (
-			(subjobTaskIdToSubtract.includes(combinedKey) || taskId == "-1") &&
-			subjobId != "-1"
-		) {
-			result = numjsSubtraction(result, values);
-		}
+		subjobTaskIdToSubtract.forEach(key => {
+			[targetSubjobId, targetTaskId] = key.split(",");
+
+			// Original Condition or subjob doesnt matter as task "other" is picked
+			if (
+				(targetSubjobId == subjobId && targetTaskId == taskId) ||
+				(targetTaskId == "-1" && taskId == "-1")
+			) {
+				result = numjsSubtraction(result, values);
+			}
+		});
 	});
 
 	return roundArray(result);

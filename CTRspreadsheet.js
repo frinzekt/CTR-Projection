@@ -79,6 +79,16 @@ function addSecondLevelRow(name, data) {
 function addSubjobTaskRow(subjob, task, data) {
 	addSpreadSheetRow(["", subjob, task, ...data]);
 }
+const addSubCategory = (subCategoryName, dataSet) => {
+	if (dataSet && dataSet.length) {
+		// not empty
+		addSecondLevelRow(subCategoryName, []);
+		dataSet.forEach(data => {
+			addSecondLevelRow(data[0], data.slice(1, data.length));
+		});
+		addBlankRow();
+	}
+};
 
 /*
 	Inputs:
@@ -112,132 +122,118 @@ function titleColRenderer(instance, td, row, col, prop, value, cellProperties) {
 	Return: 
 */
 function mainSpread(data) {
-	//JS ES6 Destructuring
-	let {
-		currentBudgetJob,
-		dateInterval,
-		purchaseOrderDetails,
-		invoicedAmountGroupById,
-		reconciledAmountGroupById,
-		payrollGroupByEId,
-		invoicedInGroupById,
-		expensesGroupById
-	} = data;
-	rowLength = dateInterval.length;
+	return new Promise((resolve, reject) => {
+		//JS ES6 Destructuring
+		let {
+			currentBudgetJob,
+			dateInterval,
+			purchaseOrderDetails,
+			invoicedAmountGroupById,
+			reconciledAmountGroupById,
+			payrollGroupByEId,
+			invoicedInGroupById,
+			expensesGroupById
+		} = data;
+		rowLength = dateInterval.length;
 
-	//Current budget
-	addSpreadSheetRow(["", "", "", ...dateInterval]);
-	addJobRow("Current Budget", currentBudgetJob);
+		//Current budget
+		addSpreadSheetRow(["", "", "", ...dateInterval]);
+		addJobRow("Current Budget", currentBudgetJob);
 
-	//Purchase Order Details
-	addSecondLevelRow("Purchase Order ID", []);
-	purchaseOrderDetails.forEach(PO => {
-		addSecondLevelRow(PO[0], PO.slice(1, rowLength + 1));
-	});
+		//Purchase Order Details
+		addSecondLevelRow("Purchase Order ID", []);
+		purchaseOrderDetails.forEach(PO => {
+			addSecondLevelRow(PO[0], PO.slice(1, rowLength + 1));
+		});
 
-	addBlankRow();
+		addBlankRow();
 
-	invoicedAmount = unpackInvoicedAmount(data);
-	[id, ...invoicedAmount] = data.invoicedAmountGroupByJob;
-	addJobRow("Invoiced Amount", invoicedAmount);
+		invoicedAmount = unpackInvoicedAmount(data);
+		[id, ...invoicedAmount] = data.invoicedAmountGroupByJob;
+		addJobRow("Invoiced Amount", invoicedAmount);
 
-	//Invoice Details
-	addSecondLevelRow("Invoice ID", []);
-	invoicedAmountGroupById.forEach(invoiceOrder => {
-		addSecondLevelRow(invoiceOrder[0], invoiceOrder.slice(1, rowLength + 1));
-	});
-	addBlankRow();
-
-	//Reconciled Amount
-	reconciledAmount = unpackReconciledAmount(data);
-	addJobRow("Reconciled Amount", reconciledAmount);
-
-	//Invoice Details
-	addSecondLevelRow("Invoice ID", []);
-	reconciledAmountGroupById.forEach(invoiceOrder => {
-		addSecondLevelRow(invoiceOrder[0], invoiceOrder.slice(1, rowLength + 1));
-	});
-
-	addBlankRow();
-	addJobRow("Amount Spent", []);
-
-	//Employee Payroll
-	if (payrollGroupByEId && payrollGroupByEId.length) {
-		// not empty
-		addSecondLevelRow("Employee", []);
-		payrollGroupByEId.forEach(employee => {
-			addSecondLevelRow(employee[0], employee.slice(1, rowLength + 1));
+		//Invoice Details
+		addSecondLevelRow("Invoice ID", []);
+		invoicedAmountGroupById.forEach(invoiceOrder => {
+			addSecondLevelRow(invoiceOrder[0], invoiceOrder.slice(1, rowLength + 1));
 		});
 		addBlankRow();
-	}
 
-	//InvoiceIn / Contractors
-	if (invoicedInGroupById && invoicedInGroupById.length) {
-		// not empty
-		addSecondLevelRow("Invoice In", []);
-		invoicedInGroupById.forEach(invoice => {
-			addSecondLevelRow(invoice[0], invoice.slice(1, rowLength + 1));
+		//Reconciled Amount
+		reconciledAmount = unpackReconciledAmount(data);
+		addJobRow("Reconciled Amount", reconciledAmount);
+
+		//Invoice Details
+		addSecondLevelRow("Invoice ID", []);
+		reconciledAmountGroupById.forEach(invoiceOrder => {
+			addSecondLevelRow(invoiceOrder[0], invoiceOrder.slice(1, rowLength + 1));
 		});
+
 		addBlankRow();
-	}
+		addJobRow("Amount Spent", []);
 
-	//Expenses
-	if (expensesGroupById && expensesGroupById.length) {
-		// not empty
-		addSecondLevelRow("Expenses", []);
-		expensesGroupById.forEach(expense => {
-			addSecondLevelRow(expense[0], expense.slice(1, rowLength + 1));
-		});
-		addBlankRow();
-	}
+		addSubCategory("Employee", payrollGroupByEId);
+		addSubCategory("Invoice In", invoicedInGroupById);
+		addSubCategory("Expenses", expensesGroupById);
 
-	//Displays Spreadsheet
-	var container = document.getElementById("spreadsheet");
-	console.log(spreadsheetData);
-	var hot = new Handsontable(container, {
-		data: spreadsheetData,
-		width: "100%",
-		rowHeights: 23,
+		//Displays Spreadsheet
+		var container = document.getElementById("spreadsheet");
+		console.log(spreadsheetData);
+		var hot = new Handsontable(container, {
+			data: spreadsheetData,
+			width: "100%",
+			rowHeights: 23,
 
-		rowHeaders: true,
-		colHeaders: true,
-		//filters: true,
-		readOnly: true, // make table cells read-only
-		stretchH: "all",
-		//dropdownMenu: true,
-		licenseKey: "non-commercial-and-evaluation",
+			rowHeaders: true,
+			colHeaders: true,
+			//filters: true,
+			readOnly: true, // make table cells read-only
+			stretchH: "all",
+			//dropdownMenu: true,
+			licenseKey: "non-commercial-and-evaluation",
 
-		fixedColumnsLeft: 2,
-		fixedRowsTop: 1,
-		viewportColumnRenderingOffset: 20,
-		viewportRowRenderingOffset: 20,
+			fixedColumnsLeft: 2,
+			fixedRowsTop: 1,
+			viewportColumnRenderingOffset: 20,
+			viewportRowRenderingOffset: 20,
 
-		cells: function(row, col) {
-			var cellProperties = {};
-			var data = this.instance.getData();
-			if (col === 0 || row === 0) {
-				cellProperties.renderer = titleColRenderer;
+			cells: function(row, col) {
+				var cellProperties = {};
+				var data = this.instance.getData();
+				if (col === 0 || row === 0) {
+					cellProperties.renderer = titleColRenderer;
+				}
+				return cellProperties;
+			},
+
+			afterRender: () => {
+				console.log("SPREADSHEET FINISHED RENDERING");
+				resolve(true);
 			}
-			return cellProperties;
-		}
-	});
+		});
 
-	// Displays the Download Button
-	var downloadBTN = document.getElementById("export-file");
-	var exportPlugin = hot.getPlugin("exportFile");
-	var filename = "CTR-".concat(id, " [YYYY]-[MM]-[DD]");
-	downloadBTN.addEventListener("click", function() {
-		exportPlugin.downloadFile("csv", {
-			bom: false,
-			columnDelimiter: ",",
-			columnHeaders: false,
-			rowHeaders: false,
-			exportHiddenColumns: false,
-			exportHiddenRows: false,
-			fileExtension: "csv",
-			filename: filename,
-			mimeType: "text/csv",
-			rowDelimiter: "\r\n"
+		// //Rerender the table in order to allow viewport change
+		// setTimeout(() => {
+		// 	hot.render();
+		// }, 100);
+
+		// Displays the Download Button
+		var downloadBTN = document.getElementById("export-file");
+		var exportPlugin = hot.getPlugin("exportFile");
+		var filename = "CTR-".concat(id, " [YYYY]-[MM]-[DD]");
+		downloadBTN.addEventListener("click", function() {
+			exportPlugin.downloadFile("csv", {
+				bom: false,
+				columnDelimiter: ",",
+				columnHeaders: false,
+				rowHeaders: false,
+				exportHiddenColumns: false,
+				exportHiddenRows: false,
+				fileExtension: "csv",
+				filename: filename,
+				mimeType: "text/csv",
+				rowDelimiter: "\r\n"
+			});
 		});
 	});
 }
