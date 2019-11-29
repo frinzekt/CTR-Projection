@@ -1,26 +1,26 @@
 const hideContent = () => {
 	//Opacity is used for manipulating visibility as to allow rendering in the background
 	let loading = true;
-	$("#loader-parent").css("opacity", "1");
-	$("#CTR-content").css("opacity", "0");
+	jQuery("#loader-parent").css("opacity", "1");
+	jQuery("#CTR-content").css("opacity", "0");
 };
 const showContent = () => {
 	let loading = false;
-	$("#loader-parent").css("opacity", "0");
-	$("#CTR-content").css("opacity", "1");
+	jQuery("#loader-parent").css("opacity", "0");
+	jQuery("#CTR-content").css("opacity", "1");
 };
 
 const getUncheckedValues = name => {
 	let values = [];
-	$(`input:checkbox[name='${name}']:not(:checked)`).each(function() {
-		values.push($(this).val());
+	jQuery(`input:checkbox[name='${name}']:not(:checked)`).each(function() {
+		values.push(jQuery(this).val());
 	});
 	return values;
 };
 
 const hideTaskInSubjobs = subjobId => {
-	$(`.subjob-${subjobId}`).toggle();
-	$(`.subjob-${subjobId}`).prop("checked", true);
+	jQuery(`.subjob-${subjobId}`).toggle();
+	jQuery(`.subjob-${subjobId}`).prop("checked", true);
 };
 
 const handleSubjobChange = e => {
@@ -43,6 +43,7 @@ const handleChange = e => {
 	expenses = unpackExpenses(data);
 	value = unpackValue(data);
 
+	console.log(payroll);
 	//Recalculate data points
 	newPayroll = subjobSubtraction(
 		payroll,
@@ -50,12 +51,14 @@ const handleChange = e => {
 		subjobIdUnchecked,
 		dateInterval.length
 	);
+	console.log(newPayroll);
 	newPayroll = subjobTaskSubtraction(
 		newPayroll,
 		payrollGroupByTask,
 		subjobTaskIdUnchecked,
 		dateInterval.length
 	);
+	console.log(newPayroll);
 
 	let amountSpent = calculateAmountSpent(
 		newPayroll,

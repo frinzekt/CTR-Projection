@@ -208,7 +208,7 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 
 	}
 	//Ensures codes are only run when everything is loaded
-	$(document).ready(() => {
+	jQuery(document).ready(() => {
 		main();
 	})
 </script>
