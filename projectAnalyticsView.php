@@ -82,6 +82,7 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 
 						$subjobsNumbers = [];
 						$taskNumbersWithSubjob = [];
+						$customClass = [];
 
 						foreach ($subjobs as $subjob) {
 							$subjobsNames[] = $subjob["Name"];
@@ -92,17 +93,23 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 							foreach ($subjob["Tasks"] as $task) {
 								$taskNamesWithSubjob[] = $task["Name"] . " (" . $subjob["Name"] . ") ";
 								$taskNumbersWithSubjob[] = "{$subjob["Number"]},{$task["Number"]}";
-
+								$customClass[] = "subjob-{$subjob["Number"]}";
 								//CREATING AN ARRAY OF TASKS
 								// $tasksDataSet[] = new ViewDataSet($task["Number"], $task["Name"]);
 							}
 							// $subjobsTasksDataSet[] = $tasksDataSet; //ADDING THE CREATED ARRAY TO ANOTHER ARRAY
 						}
 
+						//OTHERS CATEGORY TO BE ADDED IN THE LIST
+						$subjobsNames[] = "Other Subjobs";
+						$subjobsNumbers[] = "-1";
 
-						FormGroupCheck("Subjobs", $subjobsNames, $subjobsNumbers);
-						FormGroupCheck("Tasks", $taskNamesWithSubjob, $taskNumbersWithSubjob); ?>
-						<!-- <?php FormGroupCheck("View", $View) ?> -->
+						$taskNamesWithSubjob[] = "Other Tasks";
+						$taskNumbersWithSubjob[] = "-1,-1";
+						$customClass[] = "subjob--1";
+
+						FormGroupCheck("Subjobs", $subjobsNames, $subjobsNumbers, "handleSubjobChange");
+						FormGroupCheck("Tasks", $taskNamesWithSubjob, $taskNumbersWithSubjob, "handleTaskChange", $customClass); ?>
 
 						<!-- CONTINUE FORMS -->
 
@@ -125,7 +132,7 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 							</select>
 						</div>
 						<div>
-							<button class="btn btn-primary" onclick="">
+							<button class="btn btn-primary" onclick="handleChange(this)">
 								Apply changes
 							</button>
 							<button id="export-file" class="intext-btn btn btn-primary ">
@@ -155,10 +162,18 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 </body>
 <!-- NOTE COMMENT THIS ON DEPLOYMENT TO WP -->
 <link rel=" stylesheet" href="./projectAnalytics.css" />
+
 <script src="./CTRgraphing.js"></script>
 <script src="./CTRspreadsheet.js"></script>
 <script src="./CTRload.js"></script>
+
+<script src="./CTReventHandler.js"></script>
+<script src="./CTRcalculation.js"></script>
+<script src="./CTRdataParser.js"></script>
 <script>
+	//DECLARED AS GLOBAL VARIABLE FOR EVENT HANDLERS TO GET VALUE
+	let data;
+	let graphData;
 	/*
 		Inputs:
 			- API DATA in CTRgraphload()
@@ -173,20 +188,10 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 			- 
 		Return: 
 	*/
-	const hideContent = () => {
-		//Opacity is used for manipulating visibility as to allow rendering in the background
-		let loading = true;
-		$('#loader-parent').css('opacity', '1');
-		$('#CTR-content').css('opacity', '0');
-	}
-	const showContent = () => {
-		let loading = false;
-		$('#loader-parent').css('opacity', '0');
-		$('#CTR-content').css('opacity', '1');
-	}
 	async function main() {
 		hideContent();
-		let data = await CTRgraphload();
+		data = await CTRgraphload();
+
 
 		//Creates a promise that says "rendering will eventually finish"
 		let promise = new Promise((resolve, reject) => {
