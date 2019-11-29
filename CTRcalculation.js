@@ -1,4 +1,15 @@
-const numjsAddition = (array1, array2, round = true) => {
+/*
+    Inputs:
+        - array1
+        - array2 
+    Action: Adds the two arrays together element-wise while ensuring adding [] does not raise error
+    Dependencies:
+        - Numjs
+    Output:
+        - 
+    Return: Sum of the two array
+*/
+const numjsAddition = (array1, array2) => {
 	//ADDS ARRAY2 TO ARRAY1 IF ARRAY2 IS AN ARRAY AND NOT EMPTY
 	array1 = nj.array(array1);
 	if (!(!Array.isArray(array2) || !array2.length)) {
@@ -6,7 +17,18 @@ const numjsAddition = (array1, array2, round = true) => {
 	}
 	return array1.tolist();
 };
-const numjsSubtraction = (array1, array2, round = true) => {
+/*
+    Inputs:
+        - array1
+        - array2
+    Action: subtract the two arrays together element-wise while ensuring adding [] does not raise error
+    Dependencies:
+        - Numjs
+    Output:
+        - 
+    Return: Sum of the two array
+*/
+const numjsSubtraction = (array1, array2) => {
 	//ADDS ARRAY2 TO ARRAY1 IF ARRAY2 IS AN ARRAY AND NOT EMPTY
 	array1 = nj.array(array1);
 	if (!(!Array.isArray(array2) || !array2.length)) {
@@ -15,9 +37,20 @@ const numjsSubtraction = (array1, array2, round = true) => {
 	return array1.tolist();
 };
 
+/*
+    Inputs:
+        - array
+        - precision
+    Action: Rounds all element in the array by precision
+    Dependencies:
+        - 
+    Output:
+        - 
+    Return: original array (TypeError) or rounded array
+*/
 const roundArray = (array, precision) => {
 	try {
-		return array.map(x => x.toFixed(precision));
+		return array.map(x => parseFloat(x).toFixed(precision));
 	} catch (e) {
 		if (e instanceof TypeError) {
 			return array;
@@ -25,7 +58,21 @@ const roundArray = (array, precision) => {
 	}
 };
 
-//REVIEW  NEEDS TESTING
+/*
+    Inputs:
+        - 	groupByJobValue,
+	    -   groupBySubjobValue,
+	    -   subjobIdToSubtract,
+	    -   expectedLength - used to initialize the summing array as groupByJobValue not necessarily filled
+    Action: Subtracts the value of the subjobs that are unchecked in the jobs
+    Dependencies:
+        - numjsAddition() <- CTRcalculation.js
+        - numjsSubtraction() <- CTRcalculation.js
+        - roundArray() <- CTRcalculation.js
+    Output:
+        - 
+    Return: the remaining sum of Job Value excluding the subjob unchecked
+*/
 const subjobSubtraction = (
 	groupByJobValue,
 	groupBySubjobValue,
@@ -50,6 +97,21 @@ const subjobSubtraction = (
 	return roundArray(result);
 };
 
+/*
+    Inputs:
+        - 	groupByJobValue,
+	    -   groupBySubjobValue,
+	    -   subjobIdToSubtract,
+	    -   expectedLength - used to initialize the summing array as groupByJobValue not necessarily filled
+    Action: Subtracts the value of the tasks that are unchecked in the jobs
+    Dependencies:
+        - numjsAddition() <- CTRcalculation.js
+        - numjsSubtraction() <- CTRcalculation.js
+        - roundArray() <- CTRcalculation.js
+    Output:
+        - 
+    Return: the remaining sum of Job Value excluding the task unchecked
+*/
 const subjobTaskSubtraction = (
 	groupByJobValue,
 	groupByTaskValue,
@@ -86,6 +148,19 @@ const subjobTaskSubtraction = (
 	return roundArray(result);
 };
 
+/*
+    Inputs:
+        - 	payroll,
+        -   invoicedIn,
+        -   expenses,
+        -   expectedLength - used to initialize sum array as parameters may not necesarilly be filled
+    Action: Used to calculate amount spent
+    Dependencies:
+        - numJsAddition() <- CTRcalculation.js
+    Output:
+        - 
+    Return: amount spent
+*/
 const calculateAmountSpent = (
 	payroll,
 	invoicedIn,
