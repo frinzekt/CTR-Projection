@@ -1,6 +1,7 @@
 <?php
 //IMPORT ALL COMPONENTS TO BE USED
 include "./components/formGroupCheck.php";
+include "./components/modal.php";
 
 //DB CONNECTION
 include "./query/general.php";
@@ -9,18 +10,21 @@ include "./query/general.php";
 $conn = getConn();
 
 //GET INITIAL VALUE OF LOADING SEQUENCE
-$projectId = $_REQUEST['projectId'];
+if (isset($_REQUEST['projectId'])) {
+	$projectId = $_REQUEST['projectId'];
+} else {
+	echo "Status Code 200: No Project ID";
+	die();
+}
+
+//GETTING SOME INFORMATION THAT WILL BE USED TO RENDER THE PAGE
+// INFORMATION TAKEN
+/*
+- Project Name
+- Subjobs
+- Tasks
+*/
 $projectName = getProjectName($projectId);
-debug_to_console($projectName);
-// DATA STRUCTURE INIT
-// $project = new viewDataSet($projectId,name)
-
-$subjobsDataSet = [];
-$subjobsTasksDataSet = [];
-
-
-
-debug_to_console("START DEBUG");
 $subjobs = json_decode(getProjectSubjobs($projectId), true);
 
 ?>
@@ -38,28 +42,35 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 
 
 	<!-- Latest compiled JavaScript -->
+	<!-- NOTE COMMENT THIS ON DEPLOYMENT TO WP -->
 	<script src="https://code.jquery.com/jquery-3.1.1.min.js">
 	</script>
-	<!-- NOTE COMMENT THIS ON DEPLOYMENT TO WP -->
+
+	<!-- BOOTSTRAP -->
+	<!-- USED MAINLY FOR CSS LAYOUT -->
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous">
 	</script>
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous">
 	</script>
 
 	<!-- Plotly CDN -->
+	<!-- USED FOR DISPLAYING INTERACTIVE GRAPH -->
 	<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
 	<!-- HandonTable (JS EXCEL) -->
+	<!-- USED FOR DISPLAYING SPREADSHEET -->
 	<script src="https://cdn.jsdelivr.net/npm/handsontable@7.2.2/dist/handsontable.full.min.js"></script>
 	<link href="https://cdn.jsdelivr.net/npm/handsontable@7.2.2/dist/handsontable.full.min.css" rel="stylesheet" media="screen">
 
 	<!-- Numjs -->
+	<!-- USED FOR NUMERICAL CALCULATIONS OF HUGE ARRAYS - LIKE NUMPY -->
 	<script src="https://cdn.jsdelivr.net/gh/nicolaspanel/numjs@0.15.1/dist/numjs.min.js"></script>
 
-	<title>Project Name: -----</title>
+	<title>Project Name: <?php print($projectName); ?></title>
 </head>
 
 <body>
+
 	<div class="container-fluid center-block" id="loader-parent">
 		<div class="">Loading</div>
 		<div class="loader "></div>
@@ -88,41 +99,29 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 							$subjobsNames[] = $subjob["Name"];
 							$subjobsNumbers[] = $subjob["Number"];
 
-							// $subjobsDataSet[] = new ViewDataSet($subjob["Number"], $subjob["Name"]);
-							// $tasksDataSet = [];
 							foreach ($subjob["Tasks"] as $task) {
 								$taskNamesWithSubjob[] = $task["Name"] . " (" . $subjob["Name"] . ") ";
 								$taskNumbersWithSubjob[] = "{$subjob["Number"]},{$task["Number"]}";
 								$customClass[] = "subjob-{$subjob["Number"]}";
-								//CREATING AN ARRAY OF TASKS
-								// $tasksDataSet[] = new ViewDataSet($task["Number"], $task["Name"]);
 							}
-							// $subjobsTasksDataSet[] = $tasksDataSet; //ADDING THE CREATED ARRAY TO ANOTHER ARRAY
 						}
 
 						//OTHERS CATEGORY TO BE ADDED IN THE LIST
+						// See eventHandler from CTReventHandler.js for the use
+						// Summary, used to indicate selectors that are fed to a component based PHP - server-side rendered
 						$subjobsNames[] = "Other Subjobs";
 						$subjobsNumbers[] = "-1";
 
 						$taskNamesWithSubjob[] = "Other Tasks";
 						$taskNumbersWithSubjob[] = "-1,-1";
-						$customClass[] = "subjob--1";
+
+						//  "subjob--0" instead of "subjob--1" in order for other tasks to show even if Other Subjobs is unchecked
+						$customClass[] = "subjob--0";
 
 						FormGroupCheck("Subjobs", $subjobsNames, $subjobsNumbers, "handleSubjobChange");
 						FormGroupCheck("Tasks", $taskNamesWithSubjob, $taskNumbersWithSubjob, "handleTaskChange", $customClass); ?>
 
-						<!-- CONTINUE FORMS -->
-
-						<!-- <div class="form-group">
-							<h5 for="date-group">Date Range</h5>
-							<div class="date-group form-inline">
-								<input type="date" class="form-control-sm" name="date-start">
-								-
-								<input type="date" class="form-control-sm" name="date-end">
-							</div>
-
-						</div> -->
-
+						<!-- NUMBER MODE -->
 						<div class="form-group">
 							<h5 for="number-mode"> Number Mode </h5>
 							<select type="select" class="form-control-sm" placeholder="Number Mode $/%">
@@ -131,10 +130,22 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 								<option value="Both">Both</option>
 							</select>
 						</div>
+						<!-- DAYS INTERVAL FORM -->
+						<div class="form-group">
+							<h5 for="number-mode"> Days Interval As</h5>
+							<select type="select" class="form-control-sm" placeholder="Show Date Interval As">
+								<option value="10">10 days</option>
+								<option value="30">30 days</option>
+								<option value="60">60 days</option>
+							</select>
+						</div>
+
+						<!-- APPLY CHANGES BUTTON -->
 						<div>
 							<button class="btn btn-primary" onclick="handleChange(this)">
 								Apply changes
 							</button>
+							<!-- HANDSONTABLE DOWNLOAD CSV -->
 							<button id="export-file" class="intext-btn btn btn-primary ">
 								Download CSV
 							</button>
@@ -142,6 +153,8 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 					</div>
 
 				</div>
+
+				<!-- PLOTLY GRAPH CONTAINER -->
 				<div class="col-md-9 ">
 					<div class="row ">
 						<div class="container-fluid chart-container card card-body">
@@ -152,6 +165,8 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 
 				</div>
 			</div>
+
+			<!-- HANDSONTABLE SPREADSHEET CONTAINER -->
 			<div class="row container-fluid spreadsheet-container card card-body" style="">
 				<div class="" id="spreadsheet" style="">
 				</div>
