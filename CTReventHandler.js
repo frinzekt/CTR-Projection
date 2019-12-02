@@ -1,4 +1,13 @@
-//HIDES THE CONTENTS AND SHOWS THE LOADER
+/*
+	Inputs:
+		- No Input (but requires selectors to be named properly in HTML)
+	Action: make the content invisible and the loader visible
+	Dependencies:
+		-  JQUERY
+	Output:
+		- NONE
+	Return: NONE
+*/
 const hideContent = () => {
 	//Opacity is used for manipulating visibility as to allow rendering in the background
 	let loading = true;
@@ -6,7 +15,16 @@ const hideContent = () => {
 	jQuery("#CTR-content").css("opacity", "0");
 };
 
-//SHOWS THE CONTENT AND HIDES THE LOADER
+/*
+	Inputs:
+		- No Input (but requires selectors to be named properly in HTML)
+	Action: make the loader-parent invisible and content visible
+	Dependencies:
+		-  JQUERY
+	Output:
+		- NONE
+	Return: NONE
+*/
 const showContent = () => {
 	let loading = false;
 	jQuery("#loader-parent").css("opacity", "0");
@@ -18,9 +36,9 @@ const showContent = () => {
         - name - attribute name of checkbox to be recorded
     Action: Uses jquery in order to filter out all the boxes check and appends to an array
     Dependencies:
-        - 
+        -  JQUERY
     Output:
-        - 
+        - NONE
     Return: array of values of the corresponding checkboxes with the name
 */
 const getUncheckedValues = name => {
@@ -36,7 +54,7 @@ const getUncheckedValues = name => {
         - subjobId
     Action: Hides all the elements with the class corresponding to a subjob specifically used for tasks
     Dependencies:
-        - 
+        -  JQUERY
     Output:
         - hide Task in UI 
     Return: None
@@ -53,7 +71,7 @@ const hideTaskInSubjobs = subjobId => {
     Dependencies:
         - hideTaskInSubJobs() <- CTReventHandler.js
     Output:
-        - Hide tasks in UI
+        - Hide tasks of specific subjobId in UI
     Return: None
 */
 const handleSubjobChange = e => {
@@ -63,14 +81,14 @@ const handleSubjobChange = e => {
 
 /*
     Inputs:
-        - event (unused for a moment)
+        - event (unused for a moment) - REVIEW  - probably dont need it
     Action: General change handling (Currently used to for a "Apply Changes")
     Dependencies:
         - getUncheckedValues() <- CTReventHandler.js
         - unpack Data Functions <- CTRdataParser.js
         - Trace and graph redraw <- CTRgraphing.js
     Output:
-        - Redraw graph
+        - Redraw graph with filtered data
     Return: None
 */
 const handleChange = e => {
@@ -80,7 +98,11 @@ const handleChange = e => {
 	let { currentBudgetJob, dateInterval, originalSchedule } = data;
 	let { payrollGroupBySubjob, payrollGroupByTask } = data;
 
-	//GROUP BY JOB DATA UNPACKING
+	//TYPE INIT
+	let newPayroll = [0];
+
+	//GROUP BY JOB DATA UNPACKING - found in CTRdataParser.js
+	// USES ES6 DESTRUCTURING TO EXTRACT THE DATASET FROM API
 	invoicedAmount = unpackInvoicedAmount(data);
 	reconciledAmount = unpackReconciledAmount(data);
 	payroll = unpackPayroll(data);
@@ -88,41 +110,15 @@ const handleChange = e => {
 	expenses = unpackExpenses(data);
 	value = unpackValue(data);
 
-	console.log(payroll);
 	//Recalculate data points
-	newPayroll = subjobSubtraction(
-		payroll,
-		payrollGroupBySubjob,
-		subjobIdUnchecked,
-		dateInterval.length
-	);
-	console.log(newPayroll);
-	newPayroll = subjobTaskSubtraction(
-		newPayroll,
-		payrollGroupByTask,
-		subjobTaskIdUnchecked,
-		dateInterval.length
-	);
-	console.log(newPayroll);
-
-	let amountSpent = calculateAmountSpent(
-		newPayroll,
-		invoicedIn,
-		expenses,
-		dateInterval.length
-	);
+	newPayroll = subjobSubtraction(payroll, payrollGroupBySubjob, subjobIdUnchecked, dateInterval.length);
+	newPayroll = subjobTaskSubtraction(newPayroll, payrollGroupByTask, subjobTaskIdUnchecked, dateInterval.length);
+	let amountSpent = calculateAmountSpent(newPayroll, invoicedIn, expenses, dateInterval.length);
 
 	//Redraw Graph
-	reDrawGraph(
-		dateInterval,
-		currentBudgetJob,
-		originalSchedule,
-		invoicedAmount,
-		reconciledAmount,
-		value,
-		amountSpent
-	);
+	reDrawGraph(dateInterval, currentBudgetJob, originalSchedule, invoicedAmount, reconciledAmount, value, amountSpent);
 };
 const handleTaskChange = e => {
-	//STUB
+	//STUB - Nothing so far - this dictates what should happen when task changed
+	//Currently being done by handleChange event
 };

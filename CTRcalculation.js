@@ -1,12 +1,12 @@
 /*
     Inputs:
         - array1
-        - array2 
+        - array2
     Action: Adds the two arrays together element-wise while ensuring adding [] does not raise error
     Dependencies:
         - Numjs
     Output:
-        - 
+        - None
     Return: Sum of the two array
 */
 const numjsAddition = (array1, array2) => {
@@ -25,7 +25,7 @@ const numjsAddition = (array1, array2) => {
     Dependencies:
         - Numjs
     Output:
-        - 
+        - None
     Return: Sum of the two array
 */
 const numjsSubtraction = (array1, array2) => {
@@ -48,7 +48,7 @@ const numjsSubtraction = (array1, array2) => {
         - 
     Return: original array (TypeError) or rounded array
 */
-const roundArray = (array, precision) => {
+const roundArray = (array, precision = 2) => {
 	try {
 		return array.map(x => parseFloat(x).toFixed(precision));
 	} catch (e) {
@@ -60,25 +60,20 @@ const roundArray = (array, precision) => {
 
 /*
     Inputs:
-        - 	groupByJobValue,
+    	- 	groupByJobValue,
 	    -   groupBySubjobValue,
 	    -   subjobIdToSubtract,
 	    -   expectedLength - used to initialize the summing array as groupByJobValue not necessarily filled
     Action: Subtracts the value of the subjobs that are unchecked in the jobs
     Dependencies:
-        - numjsAddition() <- CTRcalculation.js
+    	- numjsAddition() <- CTRcalculation.js
         - numjsSubtraction() <- CTRcalculation.js
         - roundArray() <- CTRcalculation.js
     Output:
         - 
     Return: the remaining sum of Job Value excluding the subjob unchecked
 */
-const subjobSubtraction = (
-	groupByJobValue,
-	groupBySubjobValue,
-	subjobIdToSubtract,
-	expectedLength
-) => {
+const subjobSubtraction = (groupByJobValue, groupBySubjobValue, subjobIdToSubtract, expectedLength) => {
 	result = new Array(expectedLength).fill(0);
 	result = numjsAddition(result, groupByJobValue); // INIT VALUE
 
@@ -115,10 +110,10 @@ const subjobSubtraction = (
 const subjobTaskSubtraction = (
 	groupByJobValue,
 	groupByTaskValue,
-	subjobTaskIdToSubtract, // in the form [[s1,t1],[s2,t2]...]
+	subjobTaskIdToSubtract, // in the form ["s1,t1","s2,t2"...]
 	expectedLength
 ) => {
-	result = new Array(expectedLength).fill(0);
+	let result = new Array(expectedLength).fill(0);
 	result = numjsAddition(result, groupByJobValue); // INIT VALUE
 
 	//SUBTRACT ONLY IF THE ID BELONGS TO THE SET(subjobId) TO SUBTRACT
@@ -136,10 +131,7 @@ const subjobTaskSubtraction = (
 			[targetSubjobId, targetTaskId] = key.split(",");
 
 			// Original Condition or subjob doesnt matter as task "other" is picked
-			if (
-				(targetSubjobId == subjobId && targetTaskId == taskId) ||
-				(targetTaskId == "-1" && taskId == "-1")
-			) {
+			if ((targetSubjobId == subjobId && targetTaskId == taskId) || (targetTaskId == "-1" && taskId == "-1")) {
 				result = numjsSubtraction(result, values);
 			}
 		});
@@ -161,15 +153,18 @@ const subjobTaskSubtraction = (
         - 
     Return: amount spent
 */
-const calculateAmountSpent = (
-	payroll,
-	invoicedIn,
-	expenses,
-	expectedLength
-) => {
+const calculateAmountSpent = (payroll, invoicedIn, expenses, expectedLength) => {
 	let amountSpent = new Array(expectedLength).fill(0);
 	amountSpent = numjsAddition(amountSpent, payroll);
 	amountSpent = numjsAddition(amountSpent, invoicedIn);
 	amountSpent = numjsAddition(amountSpent, expenses);
 	return amountSpent;
+};
+
+const convertDisplayToPercentage = (array, max) => {
+	//USING NUMJS OPERATIONS TO CALCULATE PERCENTAGE OF THE MAX VALUE
+	return nj
+		.array(array)
+		.multiply(100)
+		.divide(max);
 };
