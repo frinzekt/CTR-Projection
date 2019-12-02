@@ -1,12 +1,12 @@
 /*
 	Inputs:
 		- vars (POST/GET REQUEST)
-	Action: Gets all variable in the URL
+	Action: Gets all variable in the URL by filter using regex and tokenising
 	Dependencies:
-		- 
+		- NONE
 	Output:
-		- 
-	Return: vars
+		- NONE
+	Return: vars - dictionary of variable
 */
 function getUrlVars() {
 	var vars = {};
@@ -28,14 +28,14 @@ function getUrlVars() {
 	Dependencies:
 		- 
 	Output:
-		- 
+		- NONE
 	Return: returns/resolves data from a promise
 */
 function CTRgraphload() {
 	projectId = getUrlVars()["projectId"];
 	return new Promise((resolve, reject) => {
 		jQuery.ajax({
-			url: ajaxConn.ajax_url,
+			url: "http://localhost:3000/query/fetch.php", //ajaxConn.ajax_url,
 			method: "POST",
 			data: {
 				action: "ajaxCTRload",
@@ -49,21 +49,3 @@ function CTRgraphload() {
 		});
 	});
 }
-
-//USED FOR UNPACKING JSON API
-unpackInvoicedAmount = data => {
-	[id, ...invoicedAmount] = data.invoicedAmountGroupByJob;
-	return invoicedAmount;
-};
-
-//USED FOR UNPACKING JSON API
-unpackReconciledAmount = data => {
-	[id, ...reconciledAmount] = data.reconciledAmountGroupByJob;
-	return reconciledAmount;
-};
-
-//USED FOR UNPACKING JSON API
-unpackReconciledAmount = data => {
-	[id, ...reconciledAmount] = data.reconciledAmountGroupByJob;
-	return reconciledAmount;
-};
