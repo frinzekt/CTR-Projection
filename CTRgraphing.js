@@ -39,15 +39,7 @@ createSplineTrace = (xValues, yValues, name) => {
 		- NONE
 	Return: CTR Traces containing data of the inputs this function
 */
-const createCTRTraces = (
-	dateInterval,
-	currentBudget,
-	originalSchedule,
-	invoicedAmount,
-	reconciledAmount,
-	value,
-	amountSpent
-) => {
+const createCTRTraces = (dateInterval, currentBudget, originalSchedule, invoicedAmount, reconciledAmount, value, amountSpent) => {
 	// CURRENT BUDGET - BUDGET ALLOTED AT CERTAIN TIME
 	//FROM API - CURRENTLY FROM PURCHASE ORDER - VALUE
 	let currentBudgetTrace = createTrace(dateInterval, currentBudget, "Current Budget");
@@ -77,14 +69,7 @@ const createCTRTraces = (
 	let amountSpentTrace = createTrace(dateInterval, amountSpent, "Amount spent");
 
 	// PACKAGES TRACES
-	let graphData = [
-		currentBudgetTrace,
-		originalScheduleTrace,
-		invoicedAmountTrace,
-		paidAmountTrace,
-		valueTrace,
-		amountSpentTrace
-	];
+	let graphData = [currentBudgetTrace, originalScheduleTrace, invoicedAmountTrace, paidAmountTrace, valueTrace, amountSpentTrace];
 
 	return graphData;
 };
@@ -120,7 +105,7 @@ const createCTRLayout = (initWidth, initHeight, dateInterval, currentBudgetJob) 
 		},
 		yaxis: {
 			title: {
-				text: "Percentage Value?? Amount $",
+				text: "Amount ($)",
 				font: {
 					size: 18
 				}
@@ -168,22 +153,17 @@ const reDrawGraph = (
 	invoicedAmount,
 	reconciledAmount,
 	value,
-	amountSpent
+	amountSpent,
+	newTitle = "Insert Title Here"
 ) => {
 	//Create Traces for all API Data
-	graphData = createCTRTraces(
-		dateInterval,
-		currentBudget,
-		originalSchedule,
-		invoicedAmount,
-		reconciledAmount,
-		value,
-		amountSpent
-	);
-
+	console.log(dateInterval, currentBudget, originalSchedule, invoicedAmount, reconciledAmount, value, amountSpent);
+	graphData = createCTRTraces(dateInterval, currentBudget, originalSchedule, invoicedAmount, reconciledAmount, value, amountSpent);
+	console.log(graphData);
 	// Find Selector then recreate there
 	let target = document.querySelector("#graph");
-	let layout = createCTRLayout(target.clientWidth, target.clientHeight);
+	let layout = createCTRLayout(target.clientWidth, target.clientHeight, dateInterval, currentBudget);
+	layout.yaxis.title.text = newTitle;
 	return Plotly.newPlot(target, graphData, layout, { responsive: true });
 };
 
@@ -217,15 +197,7 @@ function mainGraph(data) {
 	let amountSpent = calculateAmountSpent(payroll, invoicedIn, expenses, dateInterval.length);
 
 	//SHOWING GRAPH - global variable to be picked up by event handlers
-	graphData = createCTRTraces(
-		dateInterval,
-		currentBudgetJob,
-		originalSchedule,
-		invoicedAmount,
-		reconciledAmount,
-		value,
-		amountSpent
-	);
+	graphData = createCTRTraces(dateInterval, currentBudgetJob, originalSchedule, invoicedAmount, reconciledAmount, value, amountSpent);
 
 	let target = document.querySelector("#graph");
 	let layout = createCTRLayout(target.clientWidth, target.clientHeight, dateInterval, currentBudgetJob);
