@@ -22,7 +22,7 @@ include "./general.php";
 function sigmoid($time, $max)
 {
     //SHIFT CHANGE IS A COEFFICIENT ADJUSTER
-    $shiftChange = $max / 2 / 5000;
+    $shiftChange = 3;
     return $max / (1 + exp(-$shiftChange * $time));
 }
 
