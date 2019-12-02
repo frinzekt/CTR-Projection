@@ -1,5 +1,7 @@
 <?php
-
+/*
+    NOTE: ALL FUNCTION CREATED HERE ARE HELPER FUNCTIONS FOR THE MOST BOTTOM FUNCTION
+*/
 if (is_admin()) {
     /* Graph magic ctr functiosnt */
     add_action('wp_ajax_ajaxCTRload', 'ajaxCTRload');
@@ -11,19 +13,18 @@ include "./general.php";
 //CALCULATES THE VALUE NORMALIZE TO 0 TO 1 MULTIPLIED BY THE MAX
 /*
     Inputs:
-        - $t  (number) - x-axis -> input usually between -1 to 1 
+        - $t  (number) - x-axis -> input usually between -1 to 1
         - $max (float) - maximum value of the logistic function
     Action: Utilizes logistic function to normalize values
-    Output: 
-        - 
+    Output: NONE
     Return: Value between 0 to max (float)
 */
-function sigmoid($t, $max)
+function sigmoid($time, $max)
 {
-    $shiftChange = $max / 2 / 10000;
-    return $max / (1 + exp(-$shiftChange * $t));
+    //SHIFT CHANGE IS A COEFFICIENT ADJUSTER
+    $shiftChange = $max / 2 / 5000;
+    return $max / (1 + exp(-$shiftChange * $time));
 }
-
 
 /*
     Inputs:
@@ -31,8 +32,7 @@ function sigmoid($t, $max)
         - end (number) - end of the array to be created
         - $n (int)- number of terms
     Action: Creates an Array of $n terms equally spaced between start and end
-    Output: 
-        - 
+    Output: NONE
     Return: Array of $n terms equally spaced (Array float)
 */
 function linspace($start, $end, $n)
@@ -52,8 +52,7 @@ function linspace($start, $end, $n)
     - linspace <- fetch.php
     - getDateInterval <- fetch.php
     - sigmoid <- fetch.php
-    Output: 
-        - 
+    Output: NONE
     Return: Returns an array filled with y-values of the logistic function (Array)
 */
 function generateOriginalSchedule($maxBudget, $startDate, $endDate)
@@ -78,8 +77,7 @@ function generateOriginalSchedule($maxBudget, $startDate, $endDate)
     Action: Runs the SQL and fetches the first row first column values
     Dependencies:
         - getConn
-    Output: 
-        - 
+    Output: NONE
     Return: Returns the single value of the Aggregated SQL (Array)
 */
 function fetchAggregateValue($sql)
@@ -96,15 +94,21 @@ function fetchAggregateValue($sql)
     Action: Runs the SQL and fetches the whole table
     Dependencies:
         - getConn
-    Output: 
-        - 
+    Output: none
     Return: returns the whole table generated from the sql fetch (Array)
 */
 function fetchArrayValues($sql)
 {
     $conn = getConn();
+
     $result = mysqli_query($conn, $sql);
+    if (!($result = mysqli_query($conn, $sql))) {
+        echo ("Error description: " . mysqli_error($conn));
+        die("\n {$sql}");
+    }
     $table = mysqli_fetch_all($result);
+
+
     return $table;
 }
 
@@ -113,8 +117,6 @@ function fetchArrayValues($sql)
     Inputs:
         - $day (int)
     Action: Converts the day number into a STR that is convertible using strtotime()
-    Output: 
-        - 
     Return: daytime (string)
 */
 function dayToStringConvert($day)
@@ -131,8 +133,7 @@ function dayToStringConvert($day)
     Action:  Generates days that covers all the days between startDate and endDate inclusively with a specfic day interval
     Dependencies:
         - dayToStringConvert <- fetch.php
-    Output: 
-        - 
+    Output: NONE
     Return: Returns the days that covers that dates from the start up to the endDate (can overflow) [Array of String]
 
     eg. $startDate = 2019-05-07
@@ -178,7 +179,7 @@ function getDateInterval($startDate, $endDate, $daysInterval = 7, $format = 'Y-m
         - 
     Return: [$startdate,endDate] (Array of String - Date)
 */
-function getProjectDate($projectId)
+function getProjectDate($projectId) //REVIEW  - currently using ProjectDateDynamic()
 {
     $sql = "SELECT startdate,duedate FROM `jobs` WHERE jobnumber LIKE \"{$projectId}\"";
 
@@ -191,10 +192,55 @@ function getProjectDate($projectId)
     return $row;
 }
 
-function getStartDate($projectId)
+/*
+    Inputs:
+        - $projectId
+    Action: Uses SQL UNION OF VARIOUS TABLES (mainly with field: jobId) to determine project datetimes
+    Dependencies:
+        -getConn()
+    Output: 
+        - 
+    Return: [$startdate,endDate] (Array of String - Date)
+*/
+function getProjectDateDynamic($projectId)
 {
-    // STUB  WILL BE USED TO CREATE UNION OF DATES AND GET MIN
+    $sql = "SELECT MIN(date) as StartDate,MAX(date) as EndDate  FROM( \n";
+    $conn = getConn();
 
+    //ONLY TABLES WITH  "jobID" as a field
+    $table = ["invoiceOut", "invoiceOut", "purchaseOrders", "payRoll", "invoiceIn", "invoiceIn"];
+    $dateField = ["periodStart", "periodEnd", "date", "date", "periodStart", "periodStart"];
+
+    //EXCEPTIONS 
+    $sql .= "SELECT DueDate as Date FROM jobs\n"
+        . "WHERE jobNumber=\"$projectId\"\n"
+        . "AND DueDate<>'0000-00-00'\n"
+        . "UNION\n"
+        . "SELECT StartDate as Date FROM jobs\n"
+        . "WHERE jobNumber=\"$projectId\"\n"
+        . "AND StartDate<>'0000-00-00'\n"
+        . "UNION \n";
+    //SQL GENERATOR TO UNITE (UNION) ALL DATE FIELDS
+    for ($i = 0; $i < count($table); $i++) {
+        $sql .= "SELECT {$dateField[$i]} as Date FROM {$table[$i]}\n"
+            . "WHERE jobID=\"{$projectId}\"\n"
+            . "AND {$dateField[$i]}<>'0000-00-00'\n";
+
+        if ($i == count($table) - 1) { //LAST ITEM
+            $sql .= ") \n ";
+        } else {
+            $sql .= "UNION \n ";
+        }
+    }
+    $sql .= "AS DateTable\n"
+        . "WHERE date IS NOT NULL AND date<>\"\"";
+
+    $result = mysqli_query($conn, $sql);
+    //  print($sql);
+    $row = mysqli_fetch_row($result) or die(mysqli_connect_error());
+
+    // Row = [startdate,duedate]
+    return $row;
 }
 /*
     Inputs:
@@ -202,8 +248,7 @@ function getStartDate($projectId)
         - $startDate (string - Date)
         - $endDate (string - Date) 
     Action: Gets the Current Budget by aggregating the "values" field in purchaseOrders Table in between date intervals 
-    Output: 
-        - 
+    Output: NONE
     Return: (Array) Structure
     | 6/05/2019 | 15/10/2019 |
     |-----------|------------|
@@ -240,9 +285,9 @@ function getCurrentBudgetJob($projectId, $startDate, $endDate)
         - $projectId (string)
         - $startDate (string - Date)
         - $endDate (string - Date)
-    Action: Gets the Purchase Order Values from the purchase Order Table
-    Output: 
-        - 
+    Action: Gets the Purchase Order Values from the purchase Order Table (Field: Value)
+    Output:
+        - NONE
     Return: (Array) Structure
 
     | purchaseOrder | 6/05/2019 | 15/10/2019 |
@@ -286,7 +331,7 @@ function getPODetails($projectId, $startDate, $endDate)
     Dependencies:
         - getDateInterval() <- fetch.php
     Output:
-        - 
+        - NONE
     Return: $sql
 */
 function getInvoicedAmountSQLTemplate($projectId, $startDate, $endDate, $groupBy)
@@ -325,7 +370,7 @@ function getInvoicedAmountSQLTemplate($projectId, $startDate, $endDate, $groupBy
     Dependencies:
         - getInvoicedAmountSQLTemplate()
     Output:
-        - 
+        - NONE
     Return:  (Array)
     | invoiceID | 30/09/2019 | 31/10/2019 |
     |-----------|------------|------------|
@@ -349,7 +394,7 @@ function getInvoicedAmount($projectId, $startDate, $endDate)
     Dependencies:
         - getInvoicedAmountSQLTemplate()
     Output:
-        - 
+        - NONE
     Return:  (Array)
     | jobID     | 30/09/2019 | 31/10/2019 |
     |-----------|------------|------------|
@@ -370,12 +415,62 @@ function getInvoicedAmountGroupByJob($projectId, $startDate, $endDate)
         - $projectId (string)
         - $startDate (string - Date)
         - $endDate (string - Date)
+    Action: Gets invoiced amount group by subjob
+    Dependencies:
+        - getInvoicedAmountSQLTemplate()
+    Output:
+        - NONE
+    Return:  (Array)
+    | subjobID  | 30/09/2019 | 31/10/2019 |
+    |-----------|------------|------------|
+    | 3911012   | 1760       | 1760       |
+    | 3911013   | 100        | 100        |
+*/
+
+function getInvoicedAmountGroupBySubjob($projectId, $startDate, $endDate)
+{
+
+    $sql = getInvoicedAmountSQLTemplate($projectId, $startDate, $endDate, "invoiceUnpaid.subjob");
+    //print($sql);
+    return fetchArrayValues($sql);
+}
+
+/*
+    Inputs:
+        - $projectId (string)
+        - $startDate (string - Date)
+        - $endDate (string - Date)
+    Action: Gets invoiced amount group by subjob,task
+    Dependencies:
+        - getInvoicedAmountSQLTemplate()
+    Output:
+        - 
+    Return:  (Array)
+    | subjobID  | taskID    | 30/09/2019 | 31/10/2019 |
+    |-----------|-----------|------------|------------|
+    | 3911012   | 3911012   | 1760       | 1760       |
+    | 3911013   | 3911013   | 100        | 100        |
+*/
+
+function getInvoicedAmountGroupByTask($projectId, $startDate, $endDate)
+{
+
+    $sql = getInvoicedAmountSQLTemplate($projectId, $startDate, $endDate, "invoiceUnpaid.subjob,invoiceUnpaid.taskId");
+    //print($sql);
+    return fetchArrayValues($sql);
+}
+
+/*
+    Inputs:
+        - $projectId (string)
+        - $startDate (string - Date)
+        - $endDate (string - Date)
         - $groupBy (string) - specifies the grouping aggregation and the selection of the SQL Template
     Action: Generates SQL that gets the reconciled amount by using invoiceOut Table (to filter amount by dates) and invoiceUnpaid (to get the number*price)
     Dependencies:
         - getDateInterval() <- fetch.php
     Output:
-        - 
+        - NONE
     Return: $sql
 */
 function getReconciledAmountSQLTemplate($projectId, $startDate, $endDate, $groupBy)
@@ -414,7 +509,7 @@ function getReconciledAmountSQLTemplate($projectId, $startDate, $endDate, $group
     Dependencies:
         - getReconciled AmountSQLTemplate() <- fetch.php
     Output:
-        - 
+        - NONE
     Return:  (Array)
     | invoiceID | 30/09/2019 | 31/10/2019 |
     |-----------|------------|------------|
@@ -439,7 +534,7 @@ function getReconciledAmountGroupById($projectId, $startDate, $endDate)
     Output:
         - 
     Return:  (Array)
-    | invoiceID | 30/09/2019 | 31/10/2019 |
+    | jobID     | 30/09/2019 | 31/10/2019 |
     |-----------|------------|------------|
     | 3911012   | 1760       | 1760       |
     | 3911013   | 100        | 100        |
@@ -447,6 +542,53 @@ function getReconciledAmountGroupById($projectId, $startDate, $endDate)
 function getReconciledAmountGroupByJob($projectId, $startDate, $endDate)
 {
     $sql = getReconciledAmountSQLTemplate($projectId, $startDate, $endDate, "invoiceUnpaid.jobID");
+    //print($sql);
+    return fetchArrayValues($sql);
+}
+
+/*
+    Inputs:
+        - $projectId (string)
+        - $startDate (string - Date)
+        - $endDate (string - Date)
+    Action: Gets reconciled amount group by subjob
+    Dependencies:
+        - getReconciledAmountSQLTemplate() <- fetch.php
+    Output:
+        - NONE
+    Return:  (Array)
+    | subjob    | 30/09/2019 | 31/10/2019 |
+    |-----------|------------|------------|
+    | 3911012   | 1760       | 1760       |
+    | 3911013   | 100        | 100        |
+*/
+
+function getReconciledAmountGroupBySubjob($projectId, $startDate, $endDate)
+{
+    $sql = getReconciledAmountSQLTemplate($projectId, $startDate, $endDate, "invoiceUnpaid.subjob");
+    //print($sql);
+    return fetchArrayValues($sql);
+}
+
+/*
+    Inputs:
+        - $projectId (string)
+        - $startDate (string - Date)
+        - $endDate (string - Date)
+    Action: Gets reconciled amount group by task
+    Dependencies:
+        - getReconciledAmountSQLTemplate() <- fetch.php
+    Output:
+        - 
+    Return:  (Array)
+    | subjob    | taskId    | 30/09/2019 | 31/10/2019 |
+    |-----------|-----------|------------|------------|
+    | 3911012   | 3911012   | 1760       | 1760       |
+    | 3911013   | 3911013   | 100        | 100        |
+*/
+function getReconciledAmountGroupByTask($projectId, $startDate, $endDate)
+{
+    $sql = getReconciledAmountSQLTemplate($projectId, $startDate, $endDate, "invoiceUnpaid.subjob,invoiceUnpaid.taskId");
     //print($sql);
     return fetchArrayValues($sql);
 }
@@ -744,7 +886,7 @@ function getExpensesSQLTemplate($projectId, $startDate, $endDate, $groupBy)
     Dependencies:
         - getExpensesSQLTemplate()
     Output:
-        - 
+        - NONE
     Return:  (Array)
     | expenseId | subjobId | 21/08/2019 | 20/08/2019 |
     |-----------|----------|------------|------------|
@@ -766,7 +908,7 @@ function getExpensesGroupById($projectId, $startDate, $endDate)
     Dependencies:
         - getExpensesSQLTemplate()
     Output:
-        - 
+        - NONE
     Return:  (Array)
     |    jobId | 21/08/2019 | 20/08/2019 |
     |----------|------------|------------|
@@ -788,7 +930,7 @@ function getExpensesGroupByJob($projectId, $startDate, $endDate)
     Dependencies:
         - getExpensesSQLTemplate()
     Output:
-        - 
+        - NONE
     Return:  (Array)
     | subjobId | 21/08/2019 | 20/08/2019 |
     |----------|------------|------------|
@@ -811,7 +953,7 @@ function getExpensesGroupBySubjob($projectId, $startDate, $endDate)
     Dependencies:
         - getExpensesSQLTemplate()
     Output:
-        - 
+        - None
     Return:  (Array)
     | subjobId | task     | 21/08/2019 | 20/08/2019 |
     |----------|----------|------------|------------|
@@ -827,74 +969,191 @@ function getExpensesGroupByTask($projectId, $startDate, $endDate)
 
 /*
     Inputs:
-        - $job array (2D from SQL)
-    Action: Since all the queries with job rows are only 1D Array yet SQL gives 2D Array, API packaging is better with 1D array for the purpose of easy extraction in frontend
-    Dependencies:
-        - 
-    Output:
-        - 
-    Return: $job row (1D array), if the $jo empty, returns an empty array
-*/
+        - $projectId (string)
+        - $startDate (string - Date)
+        - $endDate (string - Date)
+        - $select (string)
+        - $groupBy (string) - specifies the grouping aggregation and the selection of the SQL Template
 
-/*
-    Inputs:
-        -
-    Action: 
+    Action: Get the value of project at certain point of time by a specific grouping
+        - This is done with TASK
+        - INNER JOIN TASKASSIGNED
+        - INNER JOIN DELIVERABLES
+        - LEFT JOIN (DELIVERABLE HISTORY INNER JOIN (MAXDATE GROUP BY DELIVERABLEID AND EMPLOYEEID))
     Dependencies:
-        - 
+        - getDateInterval()
     Output:
-        - 
-    Return: 
+        - None
+    Return: Value SQL
 */
-function getValueSQLTemplate($projectId, $startDate, $endDate, $groupBy)
+function getValueSQLTemplate($projectId, $dates, $select, $groupBy)
 {
-    $sql = "SELECT {$groupBy},\n";
-    $dates = getDateInterval($startDate, $endDate, 7);
-    $numItems = count($dates);
+    $sql = "";
+    if ($select != "") {
+        $sql .= "SELECT {$select},\n";
+    } else {
+        $sql .= "SELECT \n";
+    }
 
+    $numItems = count($dates);
     //LOOP TO CREATE REPEATING SUMS
     foreach ($dates as $i => $date) { //CREATE ALL THE COLUMNS TO BE FETCH ON DAYS
-        $sql .= "SUM(T.quantity*TA.billableRate*TA.hours*d{$i}.percentage/100) AS \"{$date}\"";
+        $sql .= "SUM(T.quantity*TA.billableRate*TA.hours*d{$i}.progress/100) AS \"{$date}\"";
         if ($i === $numItems - 1) { // LAST INDEX CHECKER
             $sql .= "\n";
         } else {
             $sql .= ",\n";
         }
     }
-
+    // INNER JOIN WITH TASK ASSIGNED AND DELIVERABLES
     $sql .= "FROM tasks T\n"
-        . "INNER JOIN tasksAssigned AS TA on T.Number=TA.taskId\n";
+        . "INNER JOIN tasksAssigned AS TA on T.Number=TA.taskId AND T.Job = TA.jobID AND T.Subjob = TA.subjobID\n"
+        . "INNER JOIN deliverables AS Dd on T.Number=Dd.taskId AND T.Job = Dd.jobId AND T.Subjob = Dd.subjobId\n";
 
     //LOOP TO CREATE REPEATING INNER JOINS OF ALL THE DELIVERABLE HISTORY THAT ARE APPROVED WITH THEIR RECENT DATE PROGRESSION
     foreach ($dates as $i => $date) { //CREATE ALL THE COLUMNS TO BE FETCH ON DAYS
-        $sql .= "INNER JOIN(SELECT d.employeeID,d.percentage FROM deliverableHistory d WHERE date IN \n"
-            . "(SELECT max(date) FROM deliverableHistory WHERE date<=\"{$date}\" and status=\"approved\")"
-            . ") AS d{$i} on TA.employeeID = d{$i}.employeeID\n\n";
+        // LEFT JOIN WITH A SUBQUERY
+        // SUBQUERY: DELIVERABLE HISTORY INNER JOIN DELIVERABLE HISTORY (WITH MAX DATE)
+        $sql .= "LEFT JOIN(SELECT d.deliverableId,d.employeeID,d.progress FROM deliverableHistory d \n\n"
+            . "INNER JOIN (SELECT deliverableId,employeeId,max(date) as maxDate FROM deliverableHistory WHERE date<=\"{$date}\" AND status \n"
+            . "LIKE \"approved\" GROUP BY deliverableId,employeeId) dfilter \n"
+            . "        on d.deliverableId = dfilter.deliverableId  \n"
+            . "AND d.employeeId = dfilter.employeeId \n"
+            . "AND d.date = dfilter.maxDate \n"
+            . ") AS d{$i} on TA.employeeID = d{$i}.employeeID AND Dd.deliverableId = d{$i}.deliverableId\n\n";
     }
 
     $sql .= "WHERE T.Job=\"{$projectId}\"\n"
         . "GROUP BY {$groupBy}";
     return $sql;
 }
+
+function array_append($array1, $array2)
+{
+    if ($array1 == 0) { //FIRST RUN
+        $array1 = array_merge($array2);
+    } else {
+        $array1 = array_merge($array1, $array2);
+    }
+
+    return $array1;
+}
+/*
+    Inputs:
+          - $projectId (string)
+        - $startDate (string - Date)
+        - $endDate (string - Date)
+        - $select (string)
+        - $groupBy (string) - specifies the grouping aggregation and the selection of the SQL Template
+    Action: DUE TO THE LIMITATION OF MULTIPLE JOIN BY SQL, THIS FUNCTION IS CREATED TO MERGE SIMILAR QUERIES
+    Dependencies:
+        - 
+    Output:
+        - 
+    Return: array of specified structure in groupby
+*/
+function getValueGroupMultiJoin($projectId, $startDate, $endDate, $groupBy)
+{
+    $LIMIT = 55; //SQL JOINS LIMIT AT 60
+    $dates = getDateInterval($startDate, $endDate);
+    $groupBy = $select = $groupBy;
+    $result = 0;
+    $remaining = count($dates);
+    $sliceStartIndex = 0;
+
+    $noLoops = ceil(count($dates) / $LIMIT);
+
+    for ($i = 0; $i < $noLoops; $i++) {
+
+        //LAST ITERATION OF LOOP
+        if ($i == $noLoops - 1) {
+            $length = $remaining - $sliceStartIndex;
+            $sql = getValueSQLTemplate($projectId, array_slice($dates, $sliceStartIndex, $length), $select, $groupBy);
+            $result = array_append($result, fetchArrayValues($sql));
+        } else {
+
+            $sql = getValueSQLTemplate($projectId, array_slice($dates, $sliceStartIndex, $LIMIT), $select, $groupBy);
+            $sliceStartIndex = $LIMIT;
+            $result = array_append($result, fetchArrayValues($sql));
+        }
+        $select = "";
+    }
+
+    // print_r($result);
+    return $result;
+}
+/*
+    Inputs:
+        - $projectId (string)
+        - $startDate (string - Date)
+        - $endDate (string - Date)
+    Action: Gets value of project group by Job
+    Dependencies:
+        - getValueSQLTemplate()
+    Output:
+        - None
+    Return:  (Array)
+    |    jobId | 21/08/2019 | 20/08/2019 |
+    |----------|------------|------------|
+    |     114  | 1040       | 0          |
+*/
+
 function getValueGroupByJob($projectId, $startDate, $endDate)
 {
-    $sql = getValueSQLTemplate($projectId, $startDate, $endDate, "T.Job");
-    //print($sql);
-    return fetchArrayValues($sql);
-}
-function getValueGroupBySubjob($projectId, $startDate, $endDate)
-{
-    $sql = getValueSQLTemplate($projectId, $startDate, $endDate, "T.Subjob");
-    //print($sql);
-    return fetchArrayValues($sql);
-}
-function getValueGroupByTask($projectId, $startDate, $endDate)
-{
-    $sql = getValueSQLTemplate($projectId, $startDate, $endDate, "T.Subjob,T.Number");
-    //print($sql);
-    return fetchArrayValues($sql);
+    return getValueGroupMultiJoin($projectId, $startDate, $endDate, "T.Job");
 }
 
+/*
+    Inputs:
+        - $projectId (string)
+        - $startDate (string - Date)
+        - $endDate (string - Date)
+    Action: Gets value of project group by sub
+    Dependencies:
+        - getValueSQLTemplate()
+    Output:
+        - None
+    Return:  (Array)
+    |   subjob | 21/08/2019 | 20/08/2019 |
+    |----------|------------|------------|
+    |     114  | 1040       | 0          |
+*/
+function getValueGroupBySubjob($projectId, $startDate, $endDate)
+{
+    return getValueGroupMultiJoin($projectId, $startDate, $endDate, "T.Subjob");
+}
+
+
+/*
+    Inputs:
+        - $projectId (string)
+        - $startDate (string - Date)
+        - $endDate (string - Date)
+    Action: Gets value of project group by sub
+    Dependencies:
+        - getValueSQLTemplate()
+    Output:
+        - 
+    Return:  (Array)
+    |   subjob |   task   | 21/08/2019 | 20/08/2019 |
+    |----------|----------|------------|------------|
+    |     114  |     114  | 1040       | 0          |
+*/
+function getValueGroupByTask($projectId, $startDate, $endDate)
+{
+    return getValueGroupMultiJoin($projectId, $startDate, $endDate, "T.Subjob,T.Number");
+}
+
+/*
+    Inputs:
+        - $job array (2D from SQL)
+    Action: Since all the queries with job rows are only 1D Array yet SQL gives 2D Array, API packaging is better with 1D array for the purpose of easy extraction in frontend
+    Dependencies:
+        - 
+    Output:
+        - 
+    Return: $job row (1D array), if the $job empty, returns an empty array
+*/
 function extractJobRow($job)
 {
     if (!empty($job)) {
@@ -903,6 +1162,17 @@ function extractJobRow($job)
         return $job;
     }
 }
+
+/*
+    Inputs:
+        - $array
+    Action: Converts direct null arrays to empty array to avoid index error in frontend
+    Dependencies:
+        - NONE
+    Output:
+        - NONE
+    Return: empty array or array itself
+*/
 function nullToEmpty($array)
 {
     if ($array == null) {
@@ -938,98 +1208,86 @@ function nullToEmpty($array)
         - getExpensesGroupByTask() <- fetch.php
     Output:
         - API package with structure: (seen below before JSON ENCODE)
-    array(
-        "startDate" => $startDate,
-        "endDate" => $endDate,
-        "dateInterval" => $dateInterval,
-        "currentBudgetJob" => $currentBudgetJob,
-        "originalSchedule" => $originalSchedule,
-        "purchaseOrderDetails" => $purchaseOrderDetails,
-        "invoicedAmountGroupById" => $invoicedAmount,
-        "invoicedAmountGroupByJob" => $invoicedAmountGroupByJob,
-        "reconciledAmountGroupById" => $reconciledAmountGroupById,
-        "reconciledAmountGroupByJob" => $reconciledAmountGroupByJob,
-        "payrollGroupByEId" => $payrollGroupByEId,
-        "payrollGroupByJob" => $payrollGroupByJob,
-        "payrollGroupBySubjob" => $payrollGroupBySubjob,
-        "payrollGroupByTask" => $payrollGroupByTask,
-        "invoicedInGroupById" => $invoicedInGroupById,
-        "invoicedInGroupByJob" => $invoicedInGroupByJob,
-        "expensesGroupById" => $expensesGroupById,
-        "expensesGroupByJob" => $expensesGroupByJob,
-        "expensesGroupBySubjob" => $expensesGroupBySubjob,
-        "expensesGroupByTask" => $expensesGroupByTask
-    );
     Return: None
 
 */
+
 function ajaxCTRload()
 {
     //print_r($_REQUEST);
     $projectId = $_REQUEST['projectId'];
     //$projectId = "J18611046";
 
-    list($startDate, $endDate) = getProjectDate($projectId);
+    list($startDate, $endDate) = getProjectDateDynamic($projectId);
     $dateInterval = getDateInterval($startDate, $endDate);
     //print_r(getProjectDate($projectId));
     //print("PERIOD {$startDate} - {$endDate}\n");
     //echo "<pre>";
 
-    //print("CurrentBudgetJob\n");
     $currentBudgetJob = extractJobRow(getCurrentBudgetJob($projectId, $startDate, $endDate));
     $originalSchedule = generateOriginalSchedule(end($currentBudgetJob), $startDate, $endDate);
     $purchaseOrderDetails = getPODetails($projectId, $startDate, $endDate);
-    //print("InvoicedAmount\n");
+
     $invoicedAmount = getInvoicedAmount($projectId, $startDate, $endDate);
     $invoicedAmountGroupByJob = extractJobRow(getInvoicedAmountGroupByJob($projectId, $startDate, $endDate));
+    $invoicedAmountGroupBySubjob = getInvoicedAmountGroupBySubjob($projectId, $startDate, $endDate);
+    $invoicedAmountGroupByTask = getInvoicedAmountGroupByTask($projectId, $startDate, $endDate);
+
     $reconciledAmountGroupById = getReconciledAmountGroupById($projectId, $startDate, $endDate);
     $reconciledAmountGroupByJob = extractJobRow(getReconciledAmountGroupByJob($projectId, $startDate, $endDate));
-    //print("PayrollGroupByEId\n");
+    $reconciledAmountGroupBySubjob = getInvoicedAmountGroupBySubjob($projectId, $startDate, $endDate);
+    $reconciledAmountGroupByTask = getInvoicedAmountGroupByTask($projectId, $startDate, $endDate);
+
     $payrollGroupByEId = getPayrollGroupByEId($projectId, $startDate, $endDate);
-    //print("PayrollGroupByJob\n");
     $payrollGroupByJob      = extractJobRow(getPayrollGroupByJob($projectId, $startDate, $endDate));
-    //print("PayrollGroupBySubjob\n");
     $payrollGroupBySubjob       = getPayrollGroupBySubjob($projectId, $startDate, $endDate);
-    //print("PayrollGroupByTask(\n");
     $payrollGroupByTask     = getPayrollGroupByTask($projectId, $startDate, $endDate);
-    //print("InvoicedInGroupById\n");
+
     $invoicedInGroupById        = getInvoicedInGroupById($projectId, $startDate, $endDate);
-    //print("InvoicedInGroupByJob\n");
     $invoicedInGroupByJob       = getInvoicedInGroupByJob($projectId, $startDate, $endDate);
-    //print("ExpensesGroupById\n");
+
     $expensesGroupById      = getExpensesGroupById($projectId, $startDate, $endDate);
-    //print("ExpensesGroupByJob\n");
     $expensesGroupByJob     = getExpensesGroupByJob($projectId, $startDate, $endDate);
-    //print("ExpensesGroupBySubjob\n");
     $expensesGroupBySubjob      = getExpensesGroupBySubjob($projectId, $startDate, $endDate);
-    //print("ExpensesGroupByTask\n");
     $expensesGroupByTask        = getExpensesGroupByTask($projectId, $startDate, $endDate);
+
     $valueGroupByJob = extractJobRow(getValueGroupByJob($projectId, $startDate, $endDate));
     $valueGroupBySubjob = getValueGroupBySubjob($projectId, $startDate, $endDate);
     $valueGroupByTask = getValueGroupByTask($projectId, $startDate, $endDate);
 
-
+    //JSON PACKAGING
     $outputJson = array(
         "startDate" => $startDate,
         "endDate" => $endDate,
         "dateInterval" => nullToEmpty($dateInterval),
+
         "currentBudgetJob" => nullToEmpty($currentBudgetJob),
         "originalSchedule" => nullToEmpty($originalSchedule),
         "purchaseOrderDetails" => nullToEmpty($purchaseOrderDetails),
+
         "invoicedAmountGroupById" => nullToEmpty($invoicedAmount),
         "invoicedAmountGroupByJob" => nullToEmpty($invoicedAmountGroupByJob),
+        "invoicedAmountGroupBySubjob" => nullToEmpty($invoicedAmountGroupBySubjob),
+        "invoicedAmountGroupByTask" => nullToEmpty($invoicedAmountGroupByTask),
+
         "reconciledAmountGroupById" => nullToEmpty($reconciledAmountGroupById),
         "reconciledAmountGroupByJob" => nullToEmpty($reconciledAmountGroupByJob),
+        "reconciledAmountGroupBySubjob" => nullToEmpty($reconciledAmountGroupBySubjob),
+        "reconciledAmountGroupByTask" => nullToEmpty($reconciledAmountGroupByTask),
+
         "payrollGroupByEId" => nullToEmpty($payrollGroupByEId),
         "payrollGroupByJob" => nullToEmpty($payrollGroupByJob),
         "payrollGroupBySubjob" => nullToEmpty($payrollGroupBySubjob),
         "payrollGroupByTask" => nullToEmpty($payrollGroupByTask),
+
         "invoicedInGroupById" => nullToEmpty($invoicedInGroupById),
         "invoicedInGroupByJob" => nullToEmpty($invoicedInGroupByJob),
+
         "expensesGroupById" => nullToEmpty($expensesGroupById),
         "expensesGroupByJob" => nullToEmpty($expensesGroupByJob),
         "expensesGroupBySubjob" => nullToEmpty($expensesGroupBySubjob),
         "expensesGroupByTask" => nullToEmpty($expensesGroupByTask),
+
         "valueGroupByJob" => nullToEmpty($valueGroupByJob),
         "valueGroupBySubjob" => nullToEmpty($valueGroupBySubjob),
         "valueGroupByTask" => nullToEmpty($valueGroupByTask)
@@ -1039,6 +1297,5 @@ function ajaxCTRload()
     $outputJson = json_encode($outputJson);
     print $outputJson;
     die();
-    //echo "</pre>";
 }
 // ajaxCTRload();
