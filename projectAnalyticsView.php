@@ -124,7 +124,7 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 						<!-- NUMBER MODE -->
 						<div class="form-group">
 							<h5 for="number-mode"> Number Mode </h5>
-							<select type="select" class="form-control-sm" placeholder="Number Mode $/%">
+							<select type="select" class="form-control-sm" placeholder="Number Mode $/%" id="numberMode">
 								<option value="$">$</option>
 								<option value="%">%</option>
 								<option value="Both">Both</option>
@@ -132,8 +132,8 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 						</div>
 						<!-- DAYS INTERVAL FORM -->
 						<div class="form-group">
-							<h5 for="number-mode"> Days Interval As</h5>
-							<select type="select" class="form-control-sm" placeholder="Show Date Interval As">
+							<h5 for="numberMode"> Days Interval As</h5>
+							<select type="select" class="form-control-sm" placeholder="Show Date Interval As" id="daysInterval">
 								<option value="10">10 days</option>
 								<option value="30">30 days</option>
 								<option value="60">60 days</option>
@@ -189,6 +189,7 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 	//DECLARED AS GLOBAL VARIABLE FOR EVENT HANDLERS TO GET VALUE
 	let data;
 	let graphData;
+	let spreadsheetData = [];
 	/*
 		Inputs:
 			- API DATA in CTRgraphload()
