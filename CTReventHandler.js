@@ -64,6 +64,14 @@ const hideTaskInSubjobs = subjobId => {
 	jQuery(`.subjob-${subjobId}`).prop("checked", true);
 };
 
+const getNumberMode = () => {
+	return jQuery(`#numberMode`).val();
+};
+
+const getDaysInterval = () => {
+	return jQuery(`#daysInterval`).val();
+};
+
 /*
     Inputs:
         - event
@@ -94,9 +102,21 @@ const handleSubjobChange = e => {
 const handleChange = e => {
 	let subjobIdUnchecked = getUncheckedValues("Subjobs[]");
 	let subjobTaskIdUnchecked = getUncheckedValues("Tasks[]");
+	let numberMode = getNumberMode();
 
 	let { currentBudgetJob, dateInterval, originalSchedule } = data;
-	let { payrollGroupBySubjob, payrollGroupByTask } = data;
+	let {
+		invoicedAmountGroupBySubjob,
+		invoicedAmountGroupByTask,
+		reconciledAmountGroupBySubjob,
+		reconciledAmountGroupByTask,
+		expensesGroupBySubjob,
+		expensesGroupByTask,
+		valueGroupBySubjob,
+		valueGroupByTask,
+		payrollGroupBySubjob,
+		payrollGroupByTask
+	} = data;
 
 	//TYPE INIT
 	let newPayroll = [0];
@@ -111,12 +131,37 @@ const handleChange = e => {
 	value = unpackValue(data);
 
 	//Recalculate data points
+
+	//REVIEW: ALL INVOICES THAT HAS FIELD "SUBJOB" (HUMAN READABLE NAME) CANNOT BE TIED TO A SUBJOBID HENCE CANNOT INCLUDE IN CALCULATIONS
+	// newInvoicedAmount = subjobSubtraction(invoicedAmount, invoicedAmountGroupBySubjob, subjobIdUnchecked, dateInterval.length);
+	// newInvoicedAmount = subjobTaskSubtraction(newInvoicedAmount, invoicedAmountGroupByTask, subjobTaskIdUnchecked, dateInterval.length);
+	// newReconciledAmount = subjobSubtraction(reconciledAmount, reconciledAmountGroupBySubjob, subjobIdUnchecked, dateInterval.length);
+	// newReconciledAmount = subjobTaskSubtraction(newReconciledAmount, reconciledAmountGroupByTask, subjobTaskIdUnchecked, dateInterval.length);
+	newExpenses = subjobSubtraction(expenses, expensesGroupBySubjob, subjobIdUnchecked, dateInterval.length);
+	newExpenses = subjobTaskSubtraction(newExpenses, expensesGroupByTask, subjobTaskIdUnchecked, dateInterval.length);
+	newValue = subjobSubtraction(value, valueGroupBySubjob, subjobIdUnchecked, dateInterval.length);
+	newValue = subjobTaskSubtraction(newValue, valueGroupByTask, subjobTaskIdUnchecked, dateInterval.length);
 	newPayroll = subjobSubtraction(payroll, payrollGroupBySubjob, subjobIdUnchecked, dateInterval.length);
 	newPayroll = subjobTaskSubtraction(newPayroll, payrollGroupByTask, subjobTaskIdUnchecked, dateInterval.length);
 	let amountSpent = calculateAmountSpent(newPayroll, invoicedIn, expenses, dateInterval.length);
 
 	//Redraw Graph
-	reDrawGraph(dateInterval, currentBudgetJob, originalSchedule, invoicedAmount, reconciledAmount, value, amountSpent);
+	if (numberMode == "$") {
+		reDrawGraph(dateInterval, currentBudgetJob, originalSchedule, invoicedAmount, reconciledAmount, value, amountSpent, "Amount ($)");
+	} else {
+		let maxBudget = parseFloat(currentBudgetJob[currentBudgetJob.length - 1]);
+
+		reDrawGraph(
+			dateInterval,
+			convertDisplayToPercentage(currentBudgetJob, maxBudget),
+			convertDisplayToPercentage(originalSchedule, maxBudget),
+			convertDisplayToPercentage(invoicedAmount, maxBudget),
+			convertDisplayToPercentage(reconciledAmount, maxBudget),
+			convertDisplayToPercentage(value, maxBudget),
+			convertDisplayToPercentage(amountSpent, maxBudget),
+			"Amount (% in Budget)"
+		);
+	}
 };
 const handleTaskChange = e => {
 	//STUB - Nothing so far - this dictates what should happen when task changed
