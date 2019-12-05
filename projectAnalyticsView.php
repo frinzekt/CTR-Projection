@@ -206,7 +206,44 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 	*/
 	async function main() {
 		hideContent();
-		data = await CTRgraphload();
+		let dateData = await getProjectDate();
+		let dateInterval = dateData.dateInterval;
+		let remaining = dateInterval.length;
+		let startIndex = 0;
+		let endIndex = 0;
+
+		let LIMIT = 10; //TAKES DATA OF 10 WEEKS AT A TIME
+		let noLoops = Math.ceil(remaining / LIMIT)
+
+		//LOOPING TO GET NUMBER OF ITEMS (LIMIT), BUT LAST ITERATION ONLY GETS THE REMAINING
+		for (let i = 0; i < noLoops; i++) {
+			try {
+				//LAST ITERATION OF LOOP
+				if (i == noLoops - 1) {
+					endIndex = remaining - 1;
+					fetchData = await CTRgraphload(dateInterval[startIndex], dateInterval[endIndex], remaining, true);
+					mergeAPIArray(data, fetchData)
+					console.log(data)
+
+				} else if (i == 0) {
+					// First Iteration
+					endIndex = startIndex + LIMIT - 1
+					data = await CTRgraphload(dateInterval[startIndex], dateInterval[endIndex], remaining);
+					data.dateInterval = dateInterval
+
+					startIndex += LIMIT
+				} else {
+					endIndex = startIndex + LIMIT - 1
+					fetchData = await CTRgraphload(dateInterval[startIndex], dateInterval[endIndex], remaining);
+					mergeAPIArray(data, fetchData)
+
+					startIndex += LIMIT
+				}
+			} catch (error) {
+				console.log(error + " in API");
+				showContent();
+			}
+		}
 
 
 		//Creates a promise that says "rendering will eventually finish"

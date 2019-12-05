@@ -2,11 +2,11 @@
 /*
     NOTE: ALL FUNCTION CREATED HERE ARE HELPER FUNCTIONS FOR THE MOST BOTTOM FUNCTION
 */
-if (is_admin()) {
-    /* Graph magic ctr functiosnt */
-    add_action('wp_ajax_ajaxCTRload', 'ajaxCTRload');
-    add_action('wp_ajax_nopriv_ajaxCTRload', 'ajaxCTRload');
-}
+// if (is_admin()) {
+//     /* Graph magic ctr functiosnt */
+//     add_action('wp_ajax_ajaxCTRload', 'ajaxCTRload');
+//     add_action('wp_ajax_nopriv_ajaxCTRload', 'ajaxCTRload');
+// }
 
 include "./general.php";
 
@@ -22,7 +22,7 @@ include "./general.php";
 function sigmoid($time, $max)
 {
     //SHIFT CHANGE IS A COEFFICIENT ADJUSTER
-    $shiftChange = 3;
+    $shiftChange = 4;
     return $max / (1 + exp(-$shiftChange * $time));
 }
 
@@ -55,11 +55,8 @@ function linspace($start, $end, $n)
     Output: NONE
     Return: Returns an array filled with y-values of the logistic function (Array)
 */
-function generateOriginalSchedule($maxBudget, $startDate, $endDate)
+function generateOriginalSchedule($maxBudget, $dataSize)
 {
-    $dates = getDateInterval($startDate, $endDate, 7);
-    $dataSize = sizeof($dates);
-
     $sigmoidDataSet = linspace(-1, 1, $dataSize);
 
     $originalSchedule = [];
@@ -80,9 +77,8 @@ function generateOriginalSchedule($maxBudget, $startDate, $endDate)
     Output: NONE
     Return: Returns the single value of the Aggregated SQL (Array)
 */
-function fetchAggregateValue($sql)
+function fetchAggregateValue($sql, $conn)
 {
-    $conn = getConn();
     $result = mysqli_query($conn, $sql);
     $row = mysqli_fetch_row($result);
     return $row[0];
@@ -97,9 +93,8 @@ function fetchAggregateValue($sql)
     Output: none
     Return: returns the whole table generated from the sql fetch (Array)
 */
-function fetchArrayValues($sql)
+function fetchArrayValues($sql, $conn)
 {
-    $conn = getConn();
 
     $result = mysqli_query($conn, $sql);
     if (!($result = mysqli_query($conn, $sql))) {
@@ -112,136 +107,6 @@ function fetchArrayValues($sql)
     return $table;
 }
 
-// USED FOR TURNING DAY INTO A STRING SUITABLE FOR STRTOTIME CONVERTION
-/*
-    Inputs:
-        - $day (int)
-    Action: Converts the day number into a STR that is convertible using strtotime()
-    Return: daytime (string)
-*/
-function dayToStringConvert($day)
-{
-    return '+' . $day . 'day';
-}
-
-/*
-    Inputs:
-        - $startDate (string)
-        - $endDate (string)
-        - $daysInterval (int) - the interval between days (default value = 7 days)
-        - $format (string) - custom format of the generated day Interval
-    Action:  Generates days that covers all the days between startDate and endDate inclusively with a specfic day interval
-    Dependencies:
-        - dayToStringConvert <- fetch.php
-    Output: NONE
-    Return: Returns the days that covers that dates from the start up to the endDate (can overflow) [Array of String]
-
-    eg. $startDate = 2019-05-07
-        $endDate = 2019-05-14
-        Returns: [2019-05-07,2019-05-14]
-
-    eg. $startDate = 2019-05-07
-        $endDate = 2019-05-15
-        Returns: [2019-05-07,2019-05-14,2019-05-21]
-*/
-function getDateInterval($startDate, $endDate, $daysInterval = 7, $format = 'Y-m-d')
-{
-
-    $dates = [];
-
-    $current = strtotime($startDate);
-
-    // If the endDate cannot be found... get all the days (daysInterval*10) after startDate
-    $last = (($endDate != '0000-00-00') && ($endDate != "")) ? strtotime($endDate)
-        : strtotime(dayToStringConvert($daysInterval * 10), $current);
-    //$last = strtotime($endDate);
-
-    $timeOffset = dayToStringConvert($daysInterval - 1);
-    $daysInterval = dayToStringConvert($daysInterval);
-
-    //Loop until the current day being iterated over is less than the last date
-    while ($current <= strtotime($timeOffset, $last)) {
-
-        $dates[] = date($format, $current);
-        $current = strtotime($daysInterval, $current);
-    }
-
-    return $dates;
-}
-
-/*
-    Inputs:
-        - $projectId
-    Action: Uses SQL to determine project datetimes
-    Dependencies:
-        -getConn()
-    Output: 
-        - 
-    Return: [$startdate,endDate] (Array of String - Date)
-*/
-function getProjectDate($projectId) //REVIEW  - currently using ProjectDateDynamic()
-{
-    $sql = "SELECT startdate,duedate FROM `jobs` WHERE jobnumber LIKE \"{$projectId}\"";
-
-    $conn = getConn();
-    $result = mysqli_query($conn, $sql);
-    //print($sql);
-    $row = mysqli_fetch_row($result) or die(mysqli_connect_error());
-    // Row = [startdate,duedate]
-
-    return $row;
-}
-
-/*
-    Inputs:
-        - $projectId
-    Action: Uses SQL UNION OF VARIOUS TABLES (mainly with field: jobId) to determine project datetimes
-    Dependencies:
-        -getConn()
-    Output: 
-        - 
-    Return: [$startdate,endDate] (Array of String - Date)
-*/
-function getProjectDateDynamic($projectId)
-{
-    $sql = "SELECT MIN(date) as StartDate,MAX(date) as EndDate  FROM( \n";
-    $conn = getConn();
-
-    //ONLY TABLES WITH  "jobID" as a field
-    $table = ["invoiceOut", "invoiceOut", "purchaseOrders", "payRoll", "invoiceIn", "invoiceIn"];
-    $dateField = ["periodStart", "periodEnd", "date", "date", "periodStart", "periodStart"];
-
-    //EXCEPTIONS 
-    $sql .= "SELECT DueDate as Date FROM jobs\n"
-        . "WHERE jobNumber=\"$projectId\"\n"
-        . "AND DueDate<>'0000-00-00'\n"
-        . "UNION\n"
-        . "SELECT StartDate as Date FROM jobs\n"
-        . "WHERE jobNumber=\"$projectId\"\n"
-        . "AND StartDate<>'0000-00-00'\n"
-        . "UNION \n";
-    //SQL GENERATOR TO UNITE (UNION) ALL DATE FIELDS
-    for ($i = 0; $i < count($table); $i++) {
-        $sql .= "SELECT {$dateField[$i]} as Date FROM {$table[$i]}\n"
-            . "WHERE jobID=\"{$projectId}\"\n"
-            . "AND {$dateField[$i]}<>'0000-00-00'\n";
-
-        if ($i == count($table) - 1) { //LAST ITEM
-            $sql .= ") \n ";
-        } else {
-            $sql .= "UNION \n ";
-        }
-    }
-    $sql .= "AS DateTable\n"
-        . "WHERE date IS NOT NULL AND date<>\"\"";
-
-    $result = mysqli_query($conn, $sql);
-    //  print($sql);
-    $row = mysqli_fetch_row($result) or die(mysqli_connect_error());
-
-    // Row = [startdate,duedate]
-    return $row;
-}
 /*
     Inputs:
         - $projectId (string)
@@ -255,7 +120,7 @@ function getProjectDateDynamic($projectId)
     | 100       | 300        |
     
 */
-function getCurrentBudgetJob($projectId, $startDate, $endDate)
+function getCurrentBudgetJob($projectId, $conn, $startDate, $endDate)
 {
     $sql = "SELECT \n";
 
@@ -276,7 +141,7 @@ function getCurrentBudgetJob($projectId, $startDate, $endDate)
     $sql .= "FROM `purchaseOrders` WHERE jobId=\"{$projectId}\"";
 
     //print($sql);
-    return fetchArrayValues($sql);
+    return fetchArrayValues($sql, $conn);
 }
 
 
@@ -296,7 +161,7 @@ function getCurrentBudgetJob($projectId, $startDate, $endDate)
     | 2             | 50        | 200        |
 
 */
-function getPODetails($projectId, $startDate, $endDate)
+function getPODetails($projectId, $conn, $startDate, $endDate)
 {
     $sql = "SELECT purchaseOrder, \n";
 
@@ -318,7 +183,7 @@ function getPODetails($projectId, $startDate, $endDate)
         . " GROUP BY purchaseOrder";
 
     //print($sql);
-    return fetchArrayValues($sql);
+    return fetchArrayValues($sql, $conn);
 }
 
 /*
@@ -334,7 +199,7 @@ function getPODetails($projectId, $startDate, $endDate)
         - NONE
     Return: $sql
 */
-function getInvoicedAmountSQLTemplate($projectId, $startDate, $endDate, $groupBy)
+function getInvoicedAmountSQLTemplate($projectId, $conn, $startDate, $endDate, $groupBy)
 {
     //GET ALL INVOICE IDs WITHIN THE DATE
     $sql = "SELECT $groupBy,\n";
@@ -378,11 +243,11 @@ function getInvoicedAmountSQLTemplate($projectId, $startDate, $endDate, $groupBy
     | 3911013   | 100        | 100        |
     | 3911015   | 0          | 20         |
 */
-function getInvoicedAmount($projectId, $startDate, $endDate)
+function getInvoicedAmount($projectId, $conn, $startDate, $endDate)
 {
-    $sql = getInvoicedAmountSQLTemplate($projectId, $startDate, $endDate, "invoiceOut.invoiceID");
+    $sql = getInvoicedAmountSQLTemplate($projectId, $conn, $startDate, $endDate, "invoiceOut.invoiceID");
     //print($sql);
-    return fetchArrayValues($sql);
+    return fetchArrayValues($sql, $conn);
 }
 
 /*
@@ -402,12 +267,12 @@ function getInvoicedAmount($projectId, $startDate, $endDate)
     | 3911013   | 100        | 100        |
 */
 
-function getInvoicedAmountGroupByJob($projectId, $startDate, $endDate)
+function getInvoicedAmountGroupByJob($projectId, $conn, $startDate, $endDate)
 {
 
-    $sql = getInvoicedAmountSQLTemplate($projectId, $startDate, $endDate, "invoiceUnpaid.jobID");
+    $sql = getInvoicedAmountSQLTemplate($projectId, $conn, $startDate, $endDate, "invoiceUnpaid.jobID");
     //print($sql);
-    return fetchArrayValues($sql);
+    return fetchArrayValues($sql, $conn);
 }
 
 /*
@@ -427,12 +292,12 @@ function getInvoicedAmountGroupByJob($projectId, $startDate, $endDate)
     | 3911013   | 100        | 100        |
 */
 
-function getInvoicedAmountGroupBySubjob($projectId, $startDate, $endDate)
+function getInvoicedAmountGroupBySubjob($projectId, $conn, $startDate, $endDate)
 {
 
-    $sql = getInvoicedAmountSQLTemplate($projectId, $startDate, $endDate, "invoiceUnpaid.subjob");
+    $sql = getInvoicedAmountSQLTemplate($projectId, $conn, $startDate, $endDate, "invoiceUnpaid.subjob");
     //print($sql);
-    return fetchArrayValues($sql);
+    return fetchArrayValues($sql, $conn);
 }
 
 /*
@@ -452,12 +317,12 @@ function getInvoicedAmountGroupBySubjob($projectId, $startDate, $endDate)
     | 3911013   | 3911013   | 100        | 100        |
 */
 
-function getInvoicedAmountGroupByTask($projectId, $startDate, $endDate)
+function getInvoicedAmountGroupByTask($projectId, $conn, $startDate, $endDate)
 {
 
-    $sql = getInvoicedAmountSQLTemplate($projectId, $startDate, $endDate, "invoiceUnpaid.subjob,invoiceUnpaid.taskId");
+    $sql = getInvoicedAmountSQLTemplate($projectId, $conn, $startDate, $endDate, "invoiceUnpaid.subjob,invoiceUnpaid.taskId");
     //print($sql);
-    return fetchArrayValues($sql);
+    return fetchArrayValues($sql, $conn);
 }
 
 /*
@@ -473,7 +338,7 @@ function getInvoicedAmountGroupByTask($projectId, $startDate, $endDate)
         - NONE
     Return: $sql
 */
-function getReconciledAmountSQLTemplate($projectId, $startDate, $endDate, $groupBy)
+function getReconciledAmountSQLTemplate($projectId, $conn, $startDate, $endDate, $groupBy)
 {
     //GET ALL INVOICE IDs WITHIN THE DATE
     $sql = "SELECT $groupBy,\n";
@@ -516,11 +381,11 @@ function getReconciledAmountSQLTemplate($projectId, $startDate, $endDate, $group
     | 3911012   | 1760       | 1760       |
     | 3911013   | 100        | 100        |
 */
-function getReconciledAmountGroupById($projectId, $startDate, $endDate)
+function getReconciledAmountGroupById($projectId, $conn, $startDate, $endDate)
 {
-    $sql = getReconciledAmountSQLTemplate($projectId, $startDate, $endDate, "invoiceUnpaid.invoiceID");
+    $sql = getReconciledAmountSQLTemplate($projectId, $conn, $startDate, $endDate, "invoiceUnpaid.invoiceID");
     //print($sql);
-    return fetchArrayValues($sql);
+    return fetchArrayValues($sql, $conn);
 }
 
 /*
@@ -539,11 +404,11 @@ function getReconciledAmountGroupById($projectId, $startDate, $endDate)
     | 3911012   | 1760       | 1760       |
     | 3911013   | 100        | 100        |
 */
-function getReconciledAmountGroupByJob($projectId, $startDate, $endDate)
+function getReconciledAmountGroupByJob($projectId, $conn, $startDate, $endDate)
 {
-    $sql = getReconciledAmountSQLTemplate($projectId, $startDate, $endDate, "invoiceUnpaid.jobID");
+    $sql = getReconciledAmountSQLTemplate($projectId, $conn, $startDate, $endDate, "invoiceUnpaid.jobID");
     //print($sql);
-    return fetchArrayValues($sql);
+    return fetchArrayValues($sql, $conn);
 }
 
 /*
@@ -563,11 +428,11 @@ function getReconciledAmountGroupByJob($projectId, $startDate, $endDate)
     | 3911013   | 100        | 100        |
 */
 
-function getReconciledAmountGroupBySubjob($projectId, $startDate, $endDate)
+function getReconciledAmountGroupBySubjob($projectId, $conn, $startDate, $endDate)
 {
-    $sql = getReconciledAmountSQLTemplate($projectId, $startDate, $endDate, "invoiceUnpaid.subjob");
+    $sql = getReconciledAmountSQLTemplate($projectId, $conn, $startDate, $endDate, "invoiceUnpaid.subjob");
     //print($sql);
-    return fetchArrayValues($sql);
+    return fetchArrayValues($sql, $conn);
 }
 
 /*
@@ -586,11 +451,11 @@ function getReconciledAmountGroupBySubjob($projectId, $startDate, $endDate)
     | 3911012   | 3911012   | 1760       | 1760       |
     | 3911013   | 3911013   | 100        | 100        |
 */
-function getReconciledAmountGroupByTask($projectId, $startDate, $endDate)
+function getReconciledAmountGroupByTask($projectId, $conn, $startDate, $endDate)
 {
-    $sql = getReconciledAmountSQLTemplate($projectId, $startDate, $endDate, "invoiceUnpaid.subjob,invoiceUnpaid.taskId");
+    $sql = getReconciledAmountSQLTemplate($projectId, $conn, $startDate, $endDate, "invoiceUnpaid.subjob,invoiceUnpaid.taskId");
     //print($sql);
-    return fetchArrayValues($sql);
+    return fetchArrayValues($sql, $conn);
 }
 
 /* Amount Spent:
@@ -612,7 +477,7 @@ function getReconciledAmountGroupByTask($projectId, $startDate, $endDate)
         - 
     Return: $sql
 */
-function getPayrollSQLTemplate($projectId, $startDate, $endDate, $groupBy)
+function getPayrollSQLTemplate($projectId, $conn, $startDate, $endDate, $groupBy)
 {
     //CHANGEABLE GROUP BY
     $sql = "SELECT {$groupBy},\n";
@@ -651,11 +516,11 @@ function getPayrollSQLTemplate($projectId, $startDate, $endDate, $groupBy)
     | a@sustech.net.au | 2223.6     | 5559       |
     | b@sustech.net.au | 2223.6     | 5329       |
 */
-function getPayrollGroupByEId($projectId, $startDate, $endDate)
+function getPayrollGroupByEId($projectId, $conn, $startDate, $endDate)
 {
-    $sql = getPayrollSQLTemplate($projectId, $startDate, $endDate, "employeeID");
+    $sql = getPayrollSQLTemplate($projectId, $conn, $startDate, $endDate, "employeeID");
     //print($sql);
-    return fetchArrayValues($sql);
+    return fetchArrayValues($sql, $conn);
 }
 
 /*
@@ -675,11 +540,11 @@ function getPayrollGroupByEId($projectId, $startDate, $endDate)
     | 1              | 2223.6     | 5559       |
     | 2              | 2223.6     | 5329       |
 */
-function getPayrollGroupByJob($projectId, $startDate, $endDate)
+function getPayrollGroupByJob($projectId, $conn, $startDate, $endDate)
 {
-    $sql = getPayrollSQLTemplate($projectId, $startDate, $endDate, "jobID");
+    $sql = getPayrollSQLTemplate($projectId, $conn, $startDate, $endDate, "jobID");
     //print($sql);
-    return fetchArrayValues($sql);
+    return fetchArrayValues($sql, $conn);
 }
 
 /*
@@ -700,11 +565,11 @@ function getPayrollGroupByJob($projectId, $startDate, $endDate)
     | 2              | 2223.6     | 5329       |
 */
 
-function getPayrollGroupBySubjob($projectId, $startDate, $endDate)
+function getPayrollGroupBySubjob($projectId, $conn, $startDate, $endDate)
 {
-    $sql = getPayrollSQLTemplate($projectId, $startDate, $endDate, "subjob");
+    $sql = getPayrollSQLTemplate($projectId, $conn, $startDate, $endDate, "subjob");
     //print($sql);
-    return fetchArrayValues($sql);
+    return fetchArrayValues($sql, $conn);
 }
 
 /*
@@ -725,11 +590,11 @@ function getPayrollGroupBySubjob($projectId, $startDate, $endDate)
     | 2              | 2              | 2223.6     | 5329       |
 */
 
-function getPayrollGroupByTask($projectId, $startDate, $endDate)
+function getPayrollGroupByTask($projectId, $conn, $startDate, $endDate)
 {
-    $sql = getPayrollSQLTemplate($projectId, $startDate, $endDate, "subjob,task");
+    $sql = getPayrollSQLTemplate($projectId, $conn, $startDate, $endDate, "subjob,task");
     //print($sql);
-    return fetchArrayValues($sql);
+    return fetchArrayValues($sql, $conn);
 }
 
 // CONTRACTOR / INVOICE IN
@@ -746,7 +611,7 @@ function getPayrollGroupByTask($projectId, $startDate, $endDate)
         - 
     Return: $sql
 */
-function getInvoicedInSQLTemplate($projectId, $startDate, $endDate, $groupBy)
+function getInvoicedInSQLTemplate($projectId, $conn, $startDate, $endDate, $groupBy)
 {
     $sql = "SELECT {$groupBy},\n";
 
@@ -790,11 +655,11 @@ function getInvoicedInSQLTemplate($projectId, $startDate, $endDate, $groupBy)
     | 3911015   | 0          | 20         |
 */
 
-function getInvoicedInGroupById($projectId, $startDate, $endDate)
+function getInvoicedInGroupById($projectId, $conn, $startDate, $endDate)
 {
-    $sql = getInvoicedInSQLTemplate($projectId, $startDate, $endDate, "invoiceIn.invoiceInId");
+    $sql = getInvoicedInSQLTemplate($projectId, $conn, $startDate, $endDate, "invoiceIn.invoiceInId");
     //print($sql);
-    return fetchArrayValues($sql);
+    return fetchArrayValues($sql, $conn);
 }
 
 /*
@@ -814,7 +679,7 @@ function getInvoicedInGroupById($projectId, $startDate, $endDate)
     | 3911013   | 100        | 100        |
     | 3911015   | 0          | 20         |
 */
-function getInvoicedInGroupByJob($projectId, $startDate, $endDate)
+function getInvoicedInGroupByJob($projectId, $conn, $startDate, $endDate)
 {
     /*Structure
         | invoiceInId | contractorId | 30/09/2019 | 31/10/2019 |
@@ -822,13 +687,13 @@ function getInvoicedInGroupByJob($projectId, $startDate, $endDate)
         | i5          | 39           | 60         | 60         |
         | i6          | 39           | 60         | 60         |
     */
-    $sql = getInvoicedInSQLTemplate($projectId, $startDate, $endDate, "invoiceUnpaid.jobID");
+    $sql = getInvoicedInSQLTemplate($projectId, $conn, $startDate, $endDate, "invoiceUnpaid.jobID");
     //print($sql);
-    return fetchArrayValues($sql);
+    return fetchArrayValues($sql, $conn);
 }
 
 //  REVIEW 
-// function getInvoicedInGroupBySubJob($projectId, $startDate, $endDate)
+// function getInvoicedInGroupBySubJob($projectId,$conn, $startDate, $endDate)
 // {
 //     /*Structure
 //         | invoiceInId | contractorId | 30/09/2019 | 31/10/2019 |
@@ -836,7 +701,7 @@ function getInvoicedInGroupByJob($projectId, $startDate, $endDate)
 //         | i5          | 39           | 60         | 60         |
 //         | i6          | 39           | 60         | 60         |
 //     */
-//     $sql = getInvoicedInSQLTemplate($projectId, $startDate, $endDate, "invoiceUnpaid.jobID");
+//     $sql = getInvoicedInSQLTemplate($projectId,$conn, $startDate, $endDate, "invoiceUnpaid.jobID");
 //     return ($sql);
 // }
 
@@ -854,7 +719,7 @@ function getInvoicedInGroupByJob($projectId, $startDate, $endDate)
         - 
     Return: $sql
 */
-function getExpensesSQLTemplate($projectId, $startDate, $endDate, $groupBy)
+function getExpensesSQLTemplate($projectId, $conn, $startDate, $endDate, $groupBy)
 {
     $sql = "SELECT {$groupBy},\n";
 
@@ -892,11 +757,11 @@ function getExpensesSQLTemplate($projectId, $startDate, $endDate, $groupBy)
     |-----------|----------|------------|------------|
     | 2         |          | 1040       | 0          |
 */
-function getExpensesGroupById($projectId, $startDate, $endDate)
+function getExpensesGroupById($projectId, $conn, $startDate, $endDate)
 {
-    $sql = getExpensesSQLTemplate($projectId, $startDate, $endDate, "expenseId,subjobId");
+    $sql = getExpensesSQLTemplate($projectId, $conn, $startDate, $endDate, "expenseId,subjobId");
     //print($sql);
-    return fetchArrayValues($sql);
+    return fetchArrayValues($sql, $conn);
 }
 
 /*
@@ -914,11 +779,11 @@ function getExpensesGroupById($projectId, $startDate, $endDate)
     |----------|------------|------------|
     |     114  | 1040       | 0          |
 */
-function getExpensesGroupByJob($projectId, $startDate, $endDate)
+function getExpensesGroupByJob($projectId, $conn, $startDate, $endDate)
 {
-    $sql = getExpensesSQLTemplate($projectId, $startDate, $endDate, "jobId");
+    $sql = getExpensesSQLTemplate($projectId, $conn, $startDate, $endDate, "jobId");
     //print($sql);
-    return fetchArrayValues($sql);
+    return fetchArrayValues($sql, $conn);
 }
 
 /*
@@ -937,11 +802,11 @@ function getExpensesGroupByJob($projectId, $startDate, $endDate)
     |     114  | 1040       | 0          |
 */
 
-function getExpensesGroupBySubjob($projectId, $startDate, $endDate)
+function getExpensesGroupBySubjob($projectId, $conn, $startDate, $endDate)
 {
-    $sql = getExpensesSQLTemplate($projectId, $startDate, $endDate, "subjobId");
+    $sql = getExpensesSQLTemplate($projectId, $conn, $startDate, $endDate, "subjobId");
     //print($sql);
-    return fetchArrayValues($sql);
+    return fetchArrayValues($sql, $conn);
 }
 
 /*
@@ -960,11 +825,11 @@ function getExpensesGroupBySubjob($projectId, $startDate, $endDate)
     |     114  |     114  | 1040       | 0          |
 */
 
-function getExpensesGroupByTask($projectId, $startDate, $endDate)
+function getExpensesGroupByTask($projectId, $conn, $startDate, $endDate)
 {
-    $sql = getExpensesSQLTemplate($projectId, $startDate, $endDate, "subjobId,taskId");
+    $sql = getExpensesSQLTemplate($projectId, $conn, $startDate, $endDate, "subjobId,taskId");
     //print($sql);
-    return fetchArrayValues($sql);
+    return fetchArrayValues($sql, $conn);
 }
 
 /*
@@ -986,7 +851,7 @@ function getExpensesGroupByTask($projectId, $startDate, $endDate)
         - None
     Return: Value SQL
 */
-function getValueSQLTemplate($projectId, $dates, $select, $groupBy)
+function getValueSQLTemplate($projectId, $conn, $dates, $select, $groupBy)
 {
     $sql = "";
     if ($select != "") {
@@ -1052,7 +917,7 @@ function array_append($array1, $array2)
         - 
     Return: array of specified structure in groupby
 */
-function getValueGroupMultiJoin($projectId, $startDate, $endDate, $groupBy)
+function getValueGroupMultiJoin($projectId, $conn, $startDate, $endDate, $groupBy)
 {
     $LIMIT = 55; //SQL JOINS LIMIT AT 60
     $dates = getDateInterval($startDate, $endDate);
@@ -1063,18 +928,19 @@ function getValueGroupMultiJoin($projectId, $startDate, $endDate, $groupBy)
 
     $noLoops = ceil(count($dates) / $LIMIT);
 
+    //LOOPING TO GET NUMBER OF ITEMS (LIMIT), BUT LAST ITERATION ONLY GETS THE REMAINING
     for ($i = 0; $i < $noLoops; $i++) {
 
         //LAST ITERATION OF LOOP
         if ($i == $noLoops - 1) {
             $length = $remaining - $sliceStartIndex;
-            $sql = getValueSQLTemplate($projectId, array_slice($dates, $sliceStartIndex, $length), $select, $groupBy);
-            $result = array_append($result, fetchArrayValues($sql));
+            $sql = getValueSQLTemplate($projectId, $conn, array_slice($dates, $sliceStartIndex, $length), $select, $groupBy);
+            $result = array_append($result, fetchArrayValues($sql, $conn));
         } else {
 
-            $sql = getValueSQLTemplate($projectId, array_slice($dates, $sliceStartIndex, $LIMIT), $select, $groupBy);
-            $sliceStartIndex = $LIMIT;
-            $result = array_append($result, fetchArrayValues($sql));
+            $sql = getValueSQLTemplate($projectId, $conn, array_slice($dates, $sliceStartIndex, $LIMIT), $select, $groupBy);
+            $sliceStartIndex += $LIMIT;
+            $result = array_append($result, fetchArrayValues($sql, $conn));
         }
         $select = "";
     }
@@ -1098,9 +964,9 @@ function getValueGroupMultiJoin($projectId, $startDate, $endDate, $groupBy)
     |     114  | 1040       | 0          |
 */
 
-function getValueGroupByJob($projectId, $startDate, $endDate)
+function getValueGroupByJob($projectId, $conn, $startDate, $endDate)
 {
-    return getValueGroupMultiJoin($projectId, $startDate, $endDate, "T.Job");
+    return getValueGroupMultiJoin($projectId, $conn, $startDate, $endDate, "T.Job");
 }
 
 /*
@@ -1118,9 +984,9 @@ function getValueGroupByJob($projectId, $startDate, $endDate)
     |----------|------------|------------|
     |     114  | 1040       | 0          |
 */
-function getValueGroupBySubjob($projectId, $startDate, $endDate)
+function getValueGroupBySubjob($projectId, $conn, $startDate, $endDate)
 {
-    return getValueGroupMultiJoin($projectId, $startDate, $endDate, "T.Subjob");
+    return getValueGroupMultiJoin($projectId, $conn, $startDate, $endDate, "T.Subjob");
 }
 
 
@@ -1139,9 +1005,9 @@ function getValueGroupBySubjob($projectId, $startDate, $endDate)
     |----------|----------|------------|------------|
     |     114  |     114  | 1040       | 0          |
 */
-function getValueGroupByTask($projectId, $startDate, $endDate)
+function getValueGroupByTask($projectId, $conn, $startDate, $endDate)
 {
-    return getValueGroupMultiJoin($projectId, $startDate, $endDate, "T.Subjob,T.Number");
+    return getValueGroupMultiJoin($projectId, $conn, $startDate, $endDate, "T.Subjob,T.Number");
 }
 
 /*
@@ -1214,53 +1080,57 @@ function nullToEmpty($array)
 
 function ajaxCTRload()
 {
-    //print_r($_REQUEST);
-    $projectId = $_REQUEST['projectId'];
-    //$projectId = "J18611046";
+    // Initial Status Code
+    header("HTTP/1.1 501 Process Error");
 
-    list($startDate, $endDate) = getProjectDateDynamic($projectId);
-    $dateInterval = getDateInterval($startDate, $endDate);
+    $conn = getConn();
+
+    //REQUEST VARIABLES / INPUT
+    $projectId = $_REQUEST['projectId'];
+    $startDate = $_REQUEST['startDate'];
+    $endDate = $_REQUEST['endDate'];
+    $dateLength = $_REQUEST['dateLength'];
+    $isLastRequest = $_REQUEST['isLastRequest'];
+
     //print_r(getProjectDate($projectId));
     //print("PERIOD {$startDate} - {$endDate}\n");
     //echo "<pre>";
+    $dateInterval = getDateInterval($startDate, $endDate);
 
-    $currentBudgetJob = extractJobRow(getCurrentBudgetJob($projectId, $startDate, $endDate));
-    $originalSchedule = generateOriginalSchedule(end($currentBudgetJob), $startDate, $endDate);
-    $purchaseOrderDetails = getPODetails($projectId, $startDate, $endDate);
+    $currentBudgetJob = extractJobRow(getCurrentBudgetJob($projectId, $conn, $startDate, $endDate));
+    $originalSchedule = ($isLastRequest) ? generateOriginalSchedule(end($currentBudgetJob), $dateLength) : []; //Generate only if maxbudget is given
+    $purchaseOrderDetails = getPODetails($projectId, $conn, $startDate, $endDate);
 
-    $invoicedAmount = getInvoicedAmount($projectId, $startDate, $endDate);
-    $invoicedAmountGroupByJob = extractJobRow(getInvoicedAmountGroupByJob($projectId, $startDate, $endDate));
-    $invoicedAmountGroupBySubjob = getInvoicedAmountGroupBySubjob($projectId, $startDate, $endDate);
-    $invoicedAmountGroupByTask = getInvoicedAmountGroupByTask($projectId, $startDate, $endDate);
+    $invoicedAmount = getInvoicedAmount($projectId, $conn, $startDate, $endDate);
+    $invoicedAmountGroupByJob = extractJobRow(getInvoicedAmountGroupByJob($projectId, $conn, $startDate, $endDate));
+    $invoicedAmountGroupBySubjob = getInvoicedAmountGroupBySubjob($projectId, $conn, $startDate, $endDate);
+    $invoicedAmountGroupByTask = getInvoicedAmountGroupByTask($projectId, $conn, $startDate, $endDate);
 
-    $reconciledAmountGroupById = getReconciledAmountGroupById($projectId, $startDate, $endDate);
-    $reconciledAmountGroupByJob = extractJobRow(getReconciledAmountGroupByJob($projectId, $startDate, $endDate));
-    $reconciledAmountGroupBySubjob = getInvoicedAmountGroupBySubjob($projectId, $startDate, $endDate);
-    $reconciledAmountGroupByTask = getInvoicedAmountGroupByTask($projectId, $startDate, $endDate);
+    $reconciledAmountGroupById = getReconciledAmountGroupById($projectId, $conn, $startDate, $endDate);
+    $reconciledAmountGroupByJob = extractJobRow(getReconciledAmountGroupByJob($projectId, $conn, $startDate, $endDate));
+    $reconciledAmountGroupBySubjob = getInvoicedAmountGroupBySubjob($projectId, $conn, $startDate, $endDate);
+    $reconciledAmountGroupByTask = getInvoicedAmountGroupByTask($projectId, $conn, $startDate, $endDate);
 
-    $payrollGroupByEId = getPayrollGroupByEId($projectId, $startDate, $endDate);
-    $payrollGroupByJob      = extractJobRow(getPayrollGroupByJob($projectId, $startDate, $endDate));
-    $payrollGroupBySubjob       = getPayrollGroupBySubjob($projectId, $startDate, $endDate);
-    $payrollGroupByTask     = getPayrollGroupByTask($projectId, $startDate, $endDate);
+    $payrollGroupByEId = getPayrollGroupByEId($projectId, $conn, $startDate, $endDate);
+    $payrollGroupByJob      = extractJobRow(getPayrollGroupByJob($projectId, $conn, $startDate, $endDate));
+    $payrollGroupBySubjob       = getPayrollGroupBySubjob($projectId, $conn, $startDate, $endDate);
+    $payrollGroupByTask     = getPayrollGroupByTask($projectId, $conn, $startDate, $endDate);
 
-    $invoicedInGroupById        = getInvoicedInGroupById($projectId, $startDate, $endDate);
-    $invoicedInGroupByJob       = getInvoicedInGroupByJob($projectId, $startDate, $endDate);
+    $invoicedInGroupById        = getInvoicedInGroupById($projectId, $conn, $startDate, $endDate);
+    $invoicedInGroupByJob       = getInvoicedInGroupByJob($projectId, $conn, $startDate, $endDate);
 
-    $expensesGroupById      = getExpensesGroupById($projectId, $startDate, $endDate);
-    $expensesGroupByJob     = getExpensesGroupByJob($projectId, $startDate, $endDate);
-    $expensesGroupBySubjob      = getExpensesGroupBySubjob($projectId, $startDate, $endDate);
-    $expensesGroupByTask        = getExpensesGroupByTask($projectId, $startDate, $endDate);
+    $expensesGroupById      = getExpensesGroupById($projectId, $conn, $startDate, $endDate);
+    $expensesGroupByJob     = getExpensesGroupByJob($projectId, $conn, $startDate, $endDate);
+    $expensesGroupBySubjob      = getExpensesGroupBySubjob($projectId, $conn, $startDate, $endDate);
+    $expensesGroupByTask        = getExpensesGroupByTask($projectId, $conn, $startDate, $endDate);
 
-    $valueGroupByJob = extractJobRow(getValueGroupByJob($projectId, $startDate, $endDate));
-    $valueGroupBySubjob = getValueGroupBySubjob($projectId, $startDate, $endDate);
-    $valueGroupByTask = getValueGroupByTask($projectId, $startDate, $endDate);
+    $valueGroupByJob = []; //extractJobRow(getValueGroupByJob($projectId, $conn, $startDate, $endDate));
+    $valueGroupBySubjob = []; //getValueGroupBySubjob($projectId, $conn, $startDate, $endDate);
+    $valueGroupByTask = []; // getValueGroupByTask($projectId, $conn, $startDate, $endDate);
 
     //JSON PACKAGING
     $outputJson = array(
-        "startDate" => $startDate,
-        "endDate" => $endDate,
         "dateInterval" => nullToEmpty($dateInterval),
-
         "currentBudgetJob" => nullToEmpty($currentBudgetJob),
         "originalSchedule" => nullToEmpty($originalSchedule),
         "purchaseOrderDetails" => nullToEmpty($purchaseOrderDetails),
@@ -1294,8 +1164,9 @@ function ajaxCTRload()
 
     );
 
+    header("HTTP/1.1 200 OK");
     $outputJson = json_encode($outputJson);
     print $outputJson;
     die();
 }
-// ajaxCTRload();
+ajaxCTRload();
