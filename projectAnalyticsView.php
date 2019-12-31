@@ -218,20 +218,26 @@ $subjobs = json_decode(getProjectSubjobs($projectId), true);
 		//LOOPING TO GET NUMBER OF ITEMS (LIMIT), BUT LAST ITERATION ONLY GETS THE REMAINING
 		for (let i = 0; i < noLoops; i++) {
 			try {
-				//LAST ITERATION OF LOOP
-				if (i == noLoops - 1) {
+
+				if (i == 0) {
+					// First Iteration
+					endIndex = startIndex + LIMIT - 1
+					if (i == noLoops - 1) {
+						data = await CTRgraphload(dateInterval[startIndex], dateInterval[endIndex], remaining, true);
+					} else {
+						data = await CTRgraphload(dateInterval[startIndex], dateInterval[endIndex], remaining);
+					}
+
+					data.dateInterval = dateInterval
+
+					startIndex += LIMIT
+				} else if (i == noLoops - 1) {
+					//LAST ITERATION OF LOOP
 					endIndex = remaining - 1;
 					fetchData = await CTRgraphload(dateInterval[startIndex], dateInterval[endIndex], remaining, true);
 					mergeAPIArray(data, fetchData)
 					console.log(data)
 
-				} else if (i == 0) {
-					// First Iteration
-					endIndex = startIndex + LIMIT - 1
-					data = await CTRgraphload(dateInterval[startIndex], dateInterval[endIndex], remaining);
-					data.dateInterval = dateInterval
-
-					startIndex += LIMIT
 				} else {
 					endIndex = startIndex + LIMIT - 1
 					fetchData = await CTRgraphload(dateInterval[startIndex], dateInterval[endIndex], remaining);
