@@ -1,4 +1,6 @@
 # Cost Time Resource (CTR) Projection
+<img src="https://user-images.githubusercontent.com/44391389/71617827-d0e7f380-2bf7-11ea-9f5a-99a0a847a528.png" alt="CTR-projection" width="1000px" />
+
 
 ## Description
 
