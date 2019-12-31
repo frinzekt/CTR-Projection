@@ -38,3 +38,19 @@ To create a web application that integrates to the current system in place that 
 
 **Backend**
 - PHP - interaction with MySQL server and AJAX calls
+
+## Learning Outcomes
+1. Design and Test the system as close as to the platform it is intended to be implemented
+- this is to avoid complication in the transition between designing and implementation
+
+Examples of complications during the project because of this:
+- Big Data causes timeout occurs during live testing, but not during localhost testing
+- wordpress layout conflicts in the intended design
+
+2. Sometimes it's good to divide request into multiple small request than big ones
+- this one is a chosen solution to avoid server timeout
+
+How it was used:
+- a paging system on the API is implemented wherein it gives the data on the specified date array
+- the client sends multiple AJAX calls asynchronously
+- after all the calls has been done, it is compiled into one huge data that is workable for visualization
