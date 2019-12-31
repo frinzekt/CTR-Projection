@@ -61,7 +61,7 @@ function getProjectDate() {
 			url: ajaxConn.ajax_url,
 			method: "POST",
 			data: {
-				action: "ajaxCTRload",
+				action: "ajaxCTRGetProjectDate",
 				projectId: projectId
 			},
 			success: data => {
