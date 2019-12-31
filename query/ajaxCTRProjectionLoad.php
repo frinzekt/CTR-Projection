@@ -1124,9 +1124,9 @@ function ajaxCTRload()
     $expensesGroupBySubjob      = getExpensesGroupBySubjob($projectId, $conn, $startDate, $endDate);
     $expensesGroupByTask        = getExpensesGroupByTask($projectId, $conn, $startDate, $endDate);
 
-    $valueGroupByJob = []; //extractJobRow(getValueGroupByJob($projectId, $conn, $startDate, $endDate));
-    $valueGroupBySubjob = []; //getValueGroupBySubjob($projectId, $conn, $startDate, $endDate);
-    $valueGroupByTask = []; // getValueGroupByTask($projectId, $conn, $startDate, $endDate);
+    $valueGroupByJob = extractJobRow(getValueGroupByJob($projectId, $conn, $startDate, $endDate));
+    $valueGroupBySubjob = getValueGroupBySubjob($projectId, $conn, $startDate, $endDate);
+    $valueGroupByTask =  getValueGroupByTask($projectId, $conn, $startDate, $endDate);
 
     //JSON PACKAGING
     $outputJson = array(
