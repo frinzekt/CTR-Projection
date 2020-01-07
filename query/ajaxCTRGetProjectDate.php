@@ -81,6 +81,10 @@ function ajaxCTRGetProjectDate()
 
     $conn = getConn();
 
+    // Check connection
+    if (!$conn) {
+        die("Connection failed: " . mysqli_connect_error());
+    }
     //REQUEST VARIABLES / INPUT
     $projectId = $_REQUEST['projectId'];
 

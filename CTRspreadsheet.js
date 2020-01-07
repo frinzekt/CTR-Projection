@@ -1,6 +1,3 @@
-//Initializes Global ( the whole file) Variable Spreadsheet
-let spreadsheetData = [];
-
 /*
 	Inputs:
 		- spreadsheetData (array - global var)
@@ -140,15 +137,19 @@ const addSubCategory = (subCategoryName, dataSet) => {
 
 const addSubjobTask = (dataSetGroupBySubjob, dataSetGroupBySubjobTask) => {
 	addBlankRow();
-	addSubjobTaskRow("Subjob", "Task", []);
-	dataSetGroupBySubjob.forEach(([subjobId, ...dataSetOnDateBySubjob]) => {
-		addSecondLevelRow(subjobId, dataSetOnDateBySubjob);
-		dataSetGroupBySubjobTask.forEach(([targetSubjobId, taskId, ...dataSetOnDateByTask]) => {
-			if (targetSubjobId === subjobId) {
-				addTaskRow(taskId, dataSetOnDateByTask);
-			}
+	try {
+		addSubjobTaskRow("Subjob", "Task", []);
+		dataSetGroupBySubjob.forEach(([subjobId, ...dataSetOnDateBySubjob]) => {
+			addSecondLevelRow(subjobId, dataSetOnDateBySubjob);
+			dataSetGroupBySubjobTask.forEach(([targetSubjobId, taskId, ...dataSetOnDateByTask]) => {
+				if (targetSubjobId === subjobId) {
+					addTaskRow(taskId, dataSetOnDateByTask);
+				}
+			});
 		});
-	});
+	} catch {
+		console.log(error);
+	}
 	addBlankRow();
 };
 
@@ -312,7 +313,7 @@ function createSpreadsheetFormat(dateInterval) {
 			return {
 				type: "numeric",
 				numericFormat: {
-					pattern: "$0,0.00",
+					pattern: "0,0.00",
 					culture: "en-US" // this is the default culture, set up for USD
 				}
 			};
